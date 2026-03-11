@@ -3,26 +3,50 @@ using System.Collections.Generic;
 
 public class RouletteInitializer : MonoBehaviour
 {
-    [Header("Все слоты")]
+    [Header("Г‚Г±ГҐ Г±Г«Г®ГІГ»")]
     public List<Slot> allSlots = new List<Slot>();
 
-    [Header("Префабы секторов")]
+    [Header("ГЏГ°ГҐГґГ ГЎГ» Г±ГҐГЄГІГ®Г°Г®Гў")]
     public List<GameObject> sectorPrefabs = new List<GameObject>();
 
-    [Header("Стартовая конфигурация (индексы префабов)")]
+    [Header("Г‘ГІГ Г°ГІГ®ГўГ Гї ГЄГ®Г­ГґГЁГЈГіГ°Г Г¶ГЁГї (ГЁГ­Г¤ГҐГЄГ±Г» ГЇГ°ГҐГґГ ГЎГ®Гў)")]
     public List<int> startingConfiguration = new List<int>();
 
     private List<BaseSector> activeSectors = new List<BaseSector>();
-    private List<int> slotToSectorMap = new List<int>(); // Какой сектор в каком слоте
+                BaseSector sector = ResolveSectorComponent(prefab);
 
-    void Start()
+                else
+                {
+                    Debug.LogError($"BaseSector component was not found on prefab '{prefab.name}' (index {prefabIndex})");
+                }
+        BaseSector sector = ResolveSectorComponent(sectorObj);
+                Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>();
+        else
+        {
+            Debug.LogError($"Spawned object '{sectorObj.name}' does not contain BaseSector component");
+        }
+    }
+
+    private BaseSector ResolveSectorComponent(GameObject sectorObject)
     {
+        if (sectorObject == null)
+        {
+            return null;
+        }
+
+        BaseSector sector = sectorObject.GetComponent<BaseSector>();
+        if (sector != null)
+        {
+            return sector;
+        }
+
+        return sectorObject.GetComponentInChildren<BaseSector>(true);
         InitializeRoulette();
     }
 
     public void InitializeRoulette()
     {
-        // Очистка
+        // ГЋГ·ГЁГ±ГІГЄГ 
         ClearRoulette();
 
         slotToSectorMap = new List<int>(new int[allSlots.Count]);
@@ -41,17 +65,17 @@ public class RouletteInitializer : MonoBehaviour
                 {
                     int sectorSize = Mathf.Max(1, sector.data.size);
 
-                    // Проверяем что сектор помещается
+                    // ГЏГ°Г®ГўГҐГ°ГїГҐГ¬ Г·ГІГ® Г±ГҐГЄГІГ®Г° ГЇГ®Г¬ГҐГ№Г ГҐГІГ±Гї
                     if (currentSlot + sectorSize > allSlots.Count)
                     {
-                        Debug.LogWarning($"Сектор {sector.data.Type} не помещается!");
+                        Debug.LogWarning($"Г‘ГҐГЄГІГ®Г° {sector.data.Type} Г­ГҐ ГЇГ®Г¬ГҐГ№Г ГҐГІГ±Гї!");
                         continue;
                     }
 
-                    // Спавним сектор
+                    // Г‘ГЇГ ГўГ­ГЁГ¬ Г±ГҐГЄГІГ®Г°
                     SpawnSector(currentSlot, sectorSize, prefab, sector);
 
-                    // Отмечаем слоты
+                    // ГЋГІГ¬ГҐГ·Г ГҐГ¬ Г±Г«Г®ГІГ»
                     for (int s = 0; s < sectorSize; s++)
                     {
                         slotToSectorMap[currentSlot + s] = activeSectors.Count - 1;
@@ -62,12 +86,12 @@ public class RouletteInitializer : MonoBehaviour
             }
         }
 
-        Debug.Log($"Рулетка инициализирована! Активных секторов: {activeSectors.Count}");
+        Debug.Log($"ГђГіГ«ГҐГІГЄГ  ГЁГ­ГЁГ¶ГЁГ Г«ГЁГ§ГЁГ°Г®ГўГ Г­Г ! ГЂГЄГІГЁГўГ­Г»Гµ Г±ГҐГЄГІГ®Г°Г®Гў: {activeSectors.Count}");
     }
 
     void SpawnSector(int startSlot, int size, GameObject prefab, BaseSector sectorData)
     {
-        // Вычисляем позицию (центр между слотами)
+        // Г‚Г»Г·ГЁГ±Г«ГїГҐГ¬ ГЇГ®Г§ГЁГ¶ГЁГѕ (Г¶ГҐГ­ГІГ° Г¬ГҐГ¦Г¤Гі Г±Г«Г®ГІГ Г¬ГЁ)
         int endSlot = startSlot + size - 1;
         Slot startSlotObj = allSlots[startSlot];
         Slot endSlotObj = allSlots[endSlot];
@@ -75,7 +99,7 @@ public class RouletteInitializer : MonoBehaviour
         Vector3 centerPos = (startSlotObj.transform.position + endSlotObj.transform.position) / 2;
         Quaternion rotation = startSlotObj.transform.rotation;
 
-        // Спавн
+        // Г‘ГЇГ ГўГ­
         GameObject sectorObj = Instantiate(prefab, centerPos, rotation);
         sectorObj.transform.SetParent(transform);
 
@@ -103,7 +127,7 @@ public class RouletteInitializer : MonoBehaviour
             }
 
             activeSectors.Add(sector);
-            Debug.Log($"Спавн {sector.data.Type} (размер {size}) в слотах {startSlot}-{endSlot}");
+            Debug.Log($"Г‘ГЇГ ГўГ­ {sector.data.Type} (Г°Г Г§Г¬ГҐГ° {size}) Гў Г±Г«Г®ГІГ Гµ {startSlot}-{endSlot}");
         }
     }
 
