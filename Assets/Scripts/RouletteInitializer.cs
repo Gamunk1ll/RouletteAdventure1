@@ -94,17 +94,21 @@ public class RouletteInitializer : MonoBehaviour
         Slot startSlotObj = allSlots[startSlot];
         Slot endSlotObj = allSlots[endSlot];
 
+        // Вычисляем центр между первым и последним слотом сектора
         Vector3 centerPos = (startSlotObj.transform.position + endSlotObj.transform.position) / 2f;
-        Quaternion rotation = startSlotObj.transform.rotation;
 
-        GameObject sectorObj = Instantiate(prefab, centerPos, rotation, transform);
+        // Спавним сектор БЕЗ родителя
+        GameObject sectorObj = Instantiate(prefab, centerPos, startSlotObj.transform.rotation, transform);
 
-        float scaleMultiplier = size;
-        Vector3 scale = sectorObj.transform.localScale;
+        // Значительно увеличиваем масштаб
+        float baseScale = 5f;  // Базовый масштаб
+        float scaleMultiplier = size * baseScale;
+
+        Vector3 currentScale = sectorObj.transform.localScale;
         sectorObj.transform.localScale = new Vector3(
-            scale.x * scaleMultiplier,
-            scale.y,
-            scale.z * scaleMultiplier
+            currentScale.x * scaleMultiplier,
+            currentScale.y * scaleMultiplier,
+            currentScale.z * scaleMultiplier
         );
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
@@ -117,6 +121,7 @@ public class RouletteInitializer : MonoBehaviour
 
         Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
 
+        // Назначаем сектор всем слотам которые он занимает
         for (int i = startSlot; i <= endSlot; i++)
         {
             allSlots[i].sector = sector;
