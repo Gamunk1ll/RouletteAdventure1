@@ -1,33 +1,135 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class RouletteInitializer : MonoBehaviour
 {
-    [Header("Âñå ñëîòû")]
-    public List<Slot> allSlots = new List<Slot>();
+    [Header("All slots")]
+    public List<Slot> allSlots = new();
 
-    [Header("Ïðåôàáû ñåêòîðîâ")]
-    public List<GameObject> sectorPrefabs = new List<GameObject>();
+    [Header("Sector prefabs")]
+    public List<GameObject> sectorPrefabs = new();
 
-    [Header("Ñòàðòîâàÿ êîíôèãóðàöèÿ (èíäåêñû ïðåôàáîâ)")]
-    public List<int> startingConfiguration = new List<int>();
+    [Header("Start configuration (prefab indexes)")]
+    public List<int> startingConfiguration = new();
 
-    private List<BaseSector> activeSectors = new List<BaseSector>();
-                BaseSector sector = ResolveSectorComponent(prefab);
+    private readonly List<BaseSector> activeSectors = new();
+    private List<int> slotToSectorMap = new();
 
-                else
-                {
-                    Debug.LogError($"BaseSector component was not found on prefab '{prefab.name}' (index {prefabIndex})");
-                }
-        BaseSector sector = ResolveSectorComponent(sectorObj);
-                Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>();
-        else
-        {
-            Debug.LogError($"Spawned object '{sectorObj.name}' does not contain BaseSector component");
-        }
+    private void Start()
+    {
+        InitializeRoulette();
     }
 
-    private BaseSector ResolveSectorComponent(GameObject sectorObject)
+    public void InitializeRoulette()
+    {
+        ClearRoulette();
+
+        if (allSlots == null || allSlots.Count == 0)
+        {
+            Debug.LogError("RouletteInitializer: allSlots is empty.");
+            return;
+        }
+
+        slotToSectorMap = new List<int>(new int[allSlots.Count]);
+        for (int i = 0; i < slotToSectorMap.Count; i++)
+        {
+            slotToSectorMap[i] = -1;
+        }
+
+        int currentSlot = 0;
+
+        for (int i = 0; i < startingConfiguration.Count && currentSlot < allSlots.Count; i++)
+        {
+            int prefabIndex = startingConfiguration[i];
+
+            if (prefabIndex < 0 || prefabIndex >= sectorPrefabs.Count)
+            {
+                Debug.LogWarning($"RouletteInitializer: prefab index {prefabIndex} is out of range at config position {i}.");
+                continue;
+            }
+
+            GameObject prefab = sectorPrefabs[prefabIndex];
+            BaseSector prefabSector = ResolveSectorComponent(prefab);
+
+            if (prefabSector == null)
+            {
+                Debug.LogError($"RouletteInitializer: BaseSector component was not found on prefab '{prefab.name}' (index {prefabIndex}).");
+                continue;
+            }
+
+            if (prefabSector.data == null)
+            {
+                Debug.LogError($"RouletteInitializer: SectorData is not assigned for prefab '{prefab.name}'.");
+                continue;
+            }
+
+            int sectorSize = Mathf.Max(1, prefabSector.data.size);
+            if (currentSlot + sectorSize > allSlots.Count)
+            {
+                Debug.LogWarning($"RouletteInitializer: sector '{prefabSector.data.Type}' does not fit from slot {currentSlot} (size {sectorSize}).");
+                continue;
+            }
+
+            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, prefab);
+            if (spawnedSector == null)
+            {
+                continue;
+            }
+
+            int sectorIndex = activeSectors.Count - 1;
+            for (int s = 0; s < sectorSize; s++)
+            {
+                slotToSectorMap[currentSlot + s] = sectorIndex;
+            }
+
+            currentSlot += sectorSize;
+        }
+
+        Debug.Log($"Roulette initialized. Active sectors: {activeSectors.Count}");
+    }
+
+    private BaseSector SpawnSector(int startSlot, int size, GameObject prefab)
+    {
+        int endSlot = startSlot + size - 1;
+        Slot startSlotObj = allSlots[startSlot];
+        Slot endSlotObj = allSlots[endSlot];
+
+        Vector3 centerPos = (startSlotObj.transform.position + endSlotObj.transform.position) / 2f;
+        Quaternion rotation = startSlotObj.transform.rotation;
+
+        GameObject sectorObj = Instantiate(prefab, centerPos, rotation, transform);
+
+        float scaleMultiplier = size;
+        Vector3 scale = sectorObj.transform.localScale;
+        sectorObj.transform.localScale = new Vector3(
+            scale.x * scaleMultiplier,
+            scale.y,
+            scale.z * scaleMultiplier
+        );
+
+        BaseSector sector = ResolveSectorComponent(sectorObj);
+        if (sector == null)
+        {
+            Debug.LogError($"RouletteInitializer: spawned object '{sectorObj.name}' does not contain BaseSector component.");
+            Destroy(sectorObj);
+            return null;
+        }
+
+        Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
+
+        for (int i = startSlot; i <= endSlot; i++)
+        {
+            allSlots[i].sector = sector;
+            allSlots[i].index = i;
+            allSlots[i].visual = sectorRenderer;
+        }
+
+        activeSectors.Add(sector);
+        Debug.Log($"Spawned {sector.data.Type} (size {size}) into slots {startSlot}-{endSlot}");
+        return sector;
+    }
+
+    private static BaseSector ResolveSectorComponent(GameObject sectorObject)
     {
         if (sectorObject == null)
         {
@@ -35,128 +137,47 @@ public class RouletteInitializer : MonoBehaviour
         }
 
         BaseSector sector = sectorObject.GetComponent<BaseSector>();
-        if (sector != null)
-        {
-            return sector;
-        }
-
-        return sectorObject.GetComponentInChildren<BaseSector>(true);
-        InitializeRoulette();
+        return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
     }
 
-    public void InitializeRoulette()
+    private void ClearRoulette()
     {
-        // Î÷èñòêà
-        ClearRoulette();
-
-        slotToSectorMap = new List<int>(new int[allSlots.Count]);
-        int currentSlot = 0;
-
-        for (int i = 0; i < startingConfiguration.Count && currentSlot < allSlots.Count; i++)
-        {
-            int prefabIndex = startingConfiguration[i];
-
-            if (prefabIndex >= 0 && prefabIndex < sectorPrefabs.Count)
-            {
-                GameObject prefab = sectorPrefabs[prefabIndex];
-                BaseSector sector = prefab.GetComponent<BaseSector>();
-
-                if (sector != null)
-                {
-                    int sectorSize = Mathf.Max(1, sector.data.size);
-
-                    // Ïðîâåðÿåì ÷òî ñåêòîð ïîìåùàåòñÿ
-                    if (currentSlot + sectorSize > allSlots.Count)
-                    {
-                        Debug.LogWarning($"Ñåêòîð {sector.data.Type} íå ïîìåùàåòñÿ!");
-                        continue;
-                    }
-
-                    // Ñïàâíèì ñåêòîð
-                    SpawnSector(currentSlot, sectorSize, prefab, sector);
-
-                    // Îòìå÷àåì ñëîòû
-                    for (int s = 0; s < sectorSize; s++)
-                    {
-                        slotToSectorMap[currentSlot + s] = activeSectors.Count - 1;
-                    }
-
-                    currentSlot += sectorSize;
-                }
-            }
-        }
-
-        Debug.Log($"Ðóëåòêà èíèöèàëèçèðîâàíà! Àêòèâíûõ ñåêòîðîâ: {activeSectors.Count}");
-    }
-
-    void SpawnSector(int startSlot, int size, GameObject prefab, BaseSector sectorData)
-    {
-        // Âû÷èñëÿåì ïîçèöèþ (öåíòð ìåæäó ñëîòàìè)
-        int endSlot = startSlot + size - 1;
-        Slot startSlotObj = allSlots[startSlot];
-        Slot endSlotObj = allSlots[endSlot];
-
-        Vector3 centerPos = (startSlotObj.transform.position + endSlotObj.transform.position) / 2;
-        Quaternion rotation = startSlotObj.transform.rotation;
-
-        // Ñïàâí
-        GameObject sectorObj = Instantiate(prefab, centerPos, rotation);
-        sectorObj.transform.SetParent(transform);
-
-
-        float scaleMultiplier = size / 1f; 
-        sectorObj.transform.localScale = new Vector3(
-            sectorObj.transform.localScale.x * scaleMultiplier,
-            sectorObj.transform.localScale.y,
-            sectorObj.transform.localScale.z * scaleMultiplier
-        );
-
-        BaseSector sector = sectorObj.GetComponent<BaseSector>();
-        if (sector != null)
-        {
-            for (int i = startSlot; i < startSlot + size; i++)
-            {
-                allSlots[i].sector = sector;
-                allSlots[i].index = i;
-
-                Renderer sectorRenderer = sector.GetComponent<Renderer>();
-                if (sectorRenderer != null)
-                {
-                    allSlots[i].visual = sectorRenderer;
-                }
-            }
-
-            activeSectors.Add(sector);
-            Debug.Log($"Ñïàâí {sector.data.Type} (ðàçìåð {size}) â ñëîòàõ {startSlot}-{endSlot}");
-        }
-    }
-
-    void ClearRoulette()
-    {
-        foreach (var sector in activeSectors)
+        foreach (BaseSector sector in activeSectors)
         {
             if (sector != null)
+            {
                 Destroy(sector.gameObject);
+            }
         }
+
         activeSectors.Clear();
 
-        foreach (var slot in allSlots)
+        foreach (Slot slot in allSlots)
         {
+            if (slot == null)
+            {
+                continue;
+            }
+
             slot.sector = null;
+            slot.visual = null;
         }
     }
 
     public BaseSector GetSectorInSlot(int slotIndex)
     {
-        if (slotIndex >= 0 && slotIndex < slotToSectorMap.Count)
+        if (slotIndex < 0 || slotIndex >= slotToSectorMap.Count)
         {
-            int sectorIndex = slotToSectorMap[slotIndex];
-            if (sectorIndex >= 0 && sectorIndex < activeSectors.Count)
-            {
-                return activeSectors[sectorIndex];
-            }
+            return null;
         }
-        return null;
+
+        int sectorIndex = slotToSectorMap[slotIndex];
+        if (sectorIndex < 0 || sectorIndex >= activeSectors.Count)
+        {
+            return null;
+        }
+
+        return activeSectors[sectorIndex];
     }
 
     public List<BaseSector> GetActiveSectors()
