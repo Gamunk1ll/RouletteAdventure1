@@ -12,6 +12,10 @@ public class RouletteInitializer : MonoBehaviour
     [Header("Start configuration (prefab indexes)")]
     public List<int> startingConfiguration = new();
 
+    [Header("Spawn settings")]
+    [Tooltip("Additional Z rotation in degrees applied to each spawned sector.")]
+    public float sectorRotationOffset;
+
     private readonly List<BaseSector> activeSectors = new();
     private List<int> slotToSectorMap = new();
 
@@ -94,14 +98,18 @@ public class RouletteInitializer : MonoBehaviour
         Slot startSlotObj = allSlots[startSlot];
         Slot endSlotObj = allSlots[endSlot];
 
-        // Вычисляем центр между первым и последним слотом сектора
-        Vector3 centerPos = (startSlotObj.transform.position + endSlotObj.transform.position) / 2f;
+        Vector3 wheelCenter = transform.position;
+        Quaternion sectorRotation = Quaternion.Slerp(
+            startSlotObj.transform.rotation,
+            endSlotObj.transform.rotation,
+            0.5f
+        ) * Quaternion.Euler(0f, 0f, sectorRotationOffset);
 
-        // Спавним сектор БЕЗ родителя
-        GameObject sectorObj = Instantiate(prefab, centerPos, startSlotObj.transform.rotation, transform);
+        // Spawn at roulette center and orient to the sector arc.
+        GameObject sectorObj = Instantiate(prefab, wheelCenter, sectorRotation, transform);
 
-        // Значительно увеличиваем масштаб
-        float baseScale = 5f;  // Базовый масштаб
+        // Stretch sector by size.
+        float baseScale = 5f;
         float scaleMultiplier = size * baseScale;
 
         Vector3 currentScale = sectorObj.transform.localScale;
@@ -121,7 +129,6 @@ public class RouletteInitializer : MonoBehaviour
 
         Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
 
-        // Назначаем сектор всем слотам которые он занимает
         for (int i = startSlot; i <= endSlot; i++)
         {
             allSlots[i].sector = sector;
@@ -129,7 +136,8 @@ public class RouletteInitializer : MonoBehaviour
             allSlots[i].visual = sectorRenderer;
         }
 
-        activeSectors.Add(sector);
+        // Keep reference to the spawned root when BaseSector is on child object.
+        activeSectors.Add(sectorObj.GetComponent<BaseSector>() ?? sector);
         Debug.Log($"Spawned {sector.data.Type} (size {size}) into slots {startSlot}-{endSlot}");
         return sector;
     }
