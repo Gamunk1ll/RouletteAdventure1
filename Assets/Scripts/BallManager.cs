@@ -12,11 +12,17 @@ public class BallManager : MonoBehaviour
         if (isSpinning)
             return;
 
-        if (GameManager.Instance.state != BattleState.WaitingForPlayer)
+        if (GameManager.Instance == null || GameManager.Instance.state != BattleState.WaitingForPlayer)
             return;
 
         if (currentBalls <= 0)
             return;
+
+        if (roulette == null)
+        {
+            Debug.LogError("BallManager: RouletteManager reference is missing.");
+            return;
+        }
 
         isSpinning = true;
 
@@ -27,11 +33,16 @@ public class BallManager : MonoBehaviour
 
         for (int i = 0; i < ballsToLaunch; i++)
         {
-            roulette.TriggerRandomSlot();
+            if (!roulette.TriggerRandomSlot())
+            {
+                Debug.LogWarning("BallManager: failed to trigger slot, resolving as empty.");
+                GameManager.Instance.ResolveEmptySlot();
+            }
         }
 
         isSpinning = false;
     }
+
     public void AddBalls(int amount)
     {
         currentBalls += amount;
