@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -22,9 +24,16 @@ public class GameManager : MonoBehaviour
     public GameObject shopPanel;
     public GameObject battleUI;
     public GameObject victoryPanel;
+    public Shop shop;
+    public BattleShopStageController stageController;
 
+    [Header("Progression")]
     public int currentWave = 1;
     public int totalWaves = 15;
+
+    [Header("Shop Transition")]
+    public float shopOpenDelay = 0.8f;
+    public float shopCloseDelay = 0.8f;
 
     private int pendingBalls = 0;
     private int defeatedEnemies = 0;
@@ -36,19 +45,30 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
-    void Start()
+    private void Start()
     {
         if (enemies == null || enemies.Length == 0)
-        {
-            enemies = FindObjectsOfType<Enemy>();
-        }
+            enemies = FindObjectsOfType<Enemy>(true);
+
+        if (shop == null)
+            shop = FindObjectOfType<Shop>(true);
+
+        if (stageController == null)
+            stageController = FindObjectOfType<BattleShopStageController>(true);
+
         if (shopPanel != null) shopPanel.SetActive(false);
+        if (shop != null) shop.Close();
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (battleUI != null) battleUI.SetActive(true);
+
+        if (stageController != null)
+            stageController.ApplyBattleStateImmediate();
+
         SpawnEnemiesForWave(currentWave);
     }
 
@@ -75,12 +95,10 @@ public class GameManager : MonoBehaviour
                 if (target != null)
                 {
                     target.TakeDamage(power);
-                    Debug.Log($"Игрок атакует врага: {power} урона");
 
                     if (target.IsDead())
                     {
                         defeatedEnemies++;
-                        Debug.Log($"Враг повержен! Осталось: {enemies.Length - defeatedEnemies}");
                         CheckWaveComplete();
                     }
                 }
@@ -88,17 +106,14 @@ public class GameManager : MonoBehaviour
 
             case SectorType.Shield:
                 player.AddShield(power);
-                Debug.Log($"Игрок получает щит: {power}");
                 break;
 
             case SectorType.Heal:
                 player.Heal(power);
-                Debug.Log($"Игрок лечится: {power}");
                 break;
 
             case SectorType.Money:
                 player.AddMoney(power);
-                Debug.Log($"Игрок получает деньги: {power}");
                 break;
         }
 
@@ -118,9 +133,7 @@ public class GameManager : MonoBehaviour
         pendingBalls--;
 
         if (pendingBalls <= 0)
-        {
             EndPlayerTurn();
-        }
     }
 
     private void EndPlayerTurn()
@@ -137,41 +150,34 @@ public class GameManager : MonoBehaviour
 
     private void CheckWaveComplete()
     {
-        if (CheckAllEnemiesDefeated())
-        {
-            Debug.Log("Волна завершена!");
-            Invoke(nameof(OpenShop), 1f);
-        }
+        if (!CheckAllEnemiesDefeated())
+            return;
+
+        Invoke(nameof(OpenShop), 1f);
     }
 
     private bool CheckAllEnemiesDefeated()
     {
         foreach (Enemy enemy in enemies)
         {
-            if (enemy != null && !enemy.IsDead())
-            {
+            if (enemy != null && enemy.gameObject.activeInHierarchy && !enemy.IsDead())
                 return false;
-            }
         }
         return true;
     }
 
     private Enemy GetRandomLivingEnemy()
     {
-        System.Collections.Generic.List<Enemy> livingEnemies = new System.Collections.Generic.List<Enemy>();
+        List<Enemy> livingEnemies = new();
 
         foreach (Enemy enemy in enemies)
         {
-            if (enemy != null && !enemy.IsDead())
-            {
+            if (enemy != null && enemy.gameObject.activeInHierarchy && !enemy.IsDead())
                 livingEnemies.Add(enemy);
-            }
         }
 
         if (livingEnemies.Count > 0)
-        {
             return livingEnemies[Random.Range(0, livingEnemies.Count)];
-        }
 
         return null;
     }
@@ -204,18 +210,16 @@ public class GameManager : MonoBehaviour
     {
         int damage = 8;
         player.TakeDamage(damage);
-        Debug.Log($"Враг атакует на {damage}");
     }
 
     private void EnemyDefend()
     {
         Enemy target = GetRandomLivingEnemy();
-        if (target != null)
-        {
-            int shield = 5;
-            target.AddShield(shield);
-            Debug.Log($"Враг усиливает защиту на {shield}");
-        }
+        if (target == null)
+            return;
+
+        int shield = 5;
+        target.AddShield(shield);
     }
 
     private void EndBattleCycle()
@@ -226,36 +230,55 @@ public class GameManager : MonoBehaviour
 
     public void OpenShop()
     {
-        state = BattleState.Shop;
-
-        if (shopPanel != null)
-        {
-            shopPanel.SetActive(true);
-        }
-
-        if (battleUI != null)
-        {
-            battleUI.SetActive(false);
-        }
-
-        Debug.Log("Магазин открыт");
+        StopAllCoroutines();
+        StartCoroutine(OpenShopRoutine());
     }
 
     public void CloseShop()
     {
-        if (shopPanel != null)
-        {
-            shopPanel.SetActive(false);
-        }
+        StopAllCoroutines();
+        StartCoroutine(CloseShopRoutine());
+    }
+
+    private IEnumerator OpenShopRoutine()
+    {
+        state = BattleState.Shop;
 
         if (battleUI != null)
-        {
+            battleUI.SetActive(false);
+
+        if (shopPanel != null)
+            shopPanel.SetActive(true);
+
+        if (stageController != null)
+            stageController.FlipToShop();
+
+        if (shopOpenDelay > 0f)
+            yield return new WaitForSeconds(shopOpenDelay);
+
+        if (shop != null)
+            shop.Open();
+    }
+
+    private IEnumerator CloseShopRoutine()
+    {
+        if (shop != null)
+            shop.Close();
+
+        if (stageController != null)
+            stageController.FlipToBattle();
+
+        if (shopCloseDelay > 0f)
+            yield return new WaitForSeconds(shopCloseDelay);
+
+        if (shopPanel != null)
+            shopPanel.SetActive(false);
+
+        if (battleUI != null)
             battleUI.SetActive(true);
-        }
 
         state = BattleState.WaitingForPlayer;
         AddBalls(3);
-        Debug.Log("Магазин закрыт. Новая волна!");
     }
 
     public void Victory()
@@ -263,22 +286,15 @@ public class GameManager : MonoBehaviour
         state = BattleState.Victory;
 
         if (victoryPanel != null)
-        {
             victoryPanel.SetActive(true);
-        }
 
         if (battleUI != null)
-        {
             battleUI.SetActive(false);
-        }
-
-        Debug.Log("ПОБЕДА!");
     }
 
     public void GameOver()
     {
         state = BattleState.Defeat;
-        Debug.Log("ИГРОК ПОГИБ");
     }
 
     public void NextLevel()
@@ -287,30 +303,34 @@ public class GameManager : MonoBehaviour
         currentWave++;
 
         if (currentWave > totalWaves)
-        {
             Victory();
-        }
         else
         {
             CloseShop();
             SpawnEnemiesForWave(currentWave);
         }
-
-        Debug.Log($"Переход на волну {currentWave}");
     }
 
     public void SpawnEnemiesForWave(int waveNumber)
     {
+        if (enemies == null || enemies.Length == 0)
+            return;
+
         int enemiesCount = Mathf.Min(waveNumber, enemies.Length);
 
-        for (int i = 0; i < enemiesCount; i++)
+        for (int i = 0; i < enemies.Length; i++)
         {
-            if (enemies[i] != null)
-            {
-                enemies[i].gameObject.SetActive(true);
-                enemies[i].health = enemies[i].maxHealth;
-                enemies[i].shield = 0;
-            }
+            if (enemies[i] == null)
+                continue;
+
+            bool shouldBeActive = i < enemiesCount;
+            enemies[i].gameObject.SetActive(shouldBeActive);
+
+            if (!shouldBeActive)
+                continue;
+
+            enemies[i].health = enemies[i].maxHealth;
+            enemies[i].shield = 0;
         }
     }
 
@@ -318,8 +338,6 @@ public class GameManager : MonoBehaviour
     {
         BallManager ballManager = FindObjectOfType<BallManager>();
         if (ballManager != null)
-        {
             ballManager.AddBalls(count);
-        }
     }
 }
