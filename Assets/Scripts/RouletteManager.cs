@@ -12,11 +12,30 @@ public class RouletteManager : MonoBehaviour
         Instance = this;
     }
 
-    public void TriggerRandomSlot()
+    public bool TriggerRandomSlot()
     {
+        if (slots == null || slots.Count == 0)
+        {
+            Debug.LogError("RouletteManager: slots list is empty.");
+            return false;
+        }
 
-        int index = Random.Range(0, slots.Count);
-        slots[index].Activate();
+        List<Slot> validSlots = new();
+        foreach (Slot slot in slots)
+        {
+            if (slot != null)
+                validSlots.Add(slot);
+        }
+
+        if (validSlots.Count == 0)
+        {
+            Debug.LogError("RouletteManager: no valid slots assigned.");
+            return false;
+        }
+
+        int index = Random.Range(0, validSlots.Count);
+        validSlots[index].Activate();
+        return true;
     }
 
 }

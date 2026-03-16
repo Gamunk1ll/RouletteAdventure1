@@ -25,6 +25,12 @@ public class Slot : MonoBehaviour
             return;
         }
 
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError("Slot: GameManager.Instance is null.");
+            return;
+        }
+
         if (sector == null)
         {
             Debug.Log($"Slot {index} - EMPTY");
