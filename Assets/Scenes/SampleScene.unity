@@ -1864,13 +1864,19 @@ MonoBehaviour:
   - {fileID: 1433027471}
   - {fileID: 328247712}
   sectorPrefabs:
-  - {fileID: 545353380755462920, guid: 64efb82ff1dcc59478ee6e724e7849d7, type: 3}
-  - {fileID: 6189366498761042820, guid: 7814b0e5314c8f840a9846b40ce691ad, type: 3}
-  - {fileID: 3067784618816630629, guid: de5f5d7effa957d43919cf65e7fe0a5e, type: 3}
+  - {fileID: 4801697913320446432, guid: b33f7dbb646d97c48a21ee23e585fc0c, type: 3}
+  - {fileID: 514788002272218782, guid: 12da764122abb0345907328685c2f4a4, type: 3}
+  - {fileID: 5721625589065660621, guid: eaabd38a1735ffe45bfb12a2267e4f0f, type: 3}
   startingConfiguration: 02000000000000000100000002000000000000000100000002000000
   sectorRotationOffset: 0
-  sectorScaleMultiplier: 1
+  sectorScaleMultiplier: 0.33
+  autoFitSectorWidth: 0
+  tangentialScaleMultiplier: 1
+  placeAtWheelCenter: 0
+  wheelCenter: {fileID: 1930433387}
+  spawnedSectorsParent: {fileID: 1958504762}
   sectorPositionOffset: {x: 0, y: 0, z: 0}
+  hideGraySlots: 1
 --- !u!4 &1554135356
 Transform:
   m_ObjectHideFlags: 0
