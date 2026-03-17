@@ -3,27 +3,22 @@ using UnityEngine;
 
 public class RouletteInitializer : MonoBehaviour
 {
-    [Header("All slots")]
     public List<Slot> allSlots = new();
-
-    [Header("Sector prefabs")]
     public List<GameObject> sectorPrefabs = new();
-
-    [Header("Start configuration (prefab indexes)")]
     public List<int> startingConfiguration = new();
-
-    [Header("Spawn settings")]
-    [Tooltip("Additional Z rotation in degrees applied to each spawned sector.")]
     public float sectorRotationOffset;
-    [Tooltip("Multiplier for spawned sector scale relative to source prefab scale.")]
     public float sectorScaleMultiplier = 1f;
-    [Tooltip("Additional tangential scale multiplier (around roulette ring).")]
+    public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
-    [Tooltip("Extra offset from wheel center for all sectors.")]
+    public bool placeAtWheelCenter = true;
+    public Transform wheelCenter;
+    public Transform spawnedSectorsParent;
     public Vector3 sectorPositionOffset;
+    public bool hideGraySlots = true;
 
     private readonly List<BaseSector> activeSectors = new();
     private List<int> slotToSectorMap = new();
+    private readonly List<Renderer> slotPlaceholderVisuals = new();
 
     private void Start()
     {
@@ -32,11 +27,11 @@ public class RouletteInitializer : MonoBehaviour
 
     public void InitializeRoulette()
     {
+        CaptureSlotPlaceholders();
         ClearRoulette();
 
         if (allSlots == null || allSlots.Count == 0)
         {
-            Debug.LogError("RouletteInitializer: allSlots is empty.");
             return;
         }
 
@@ -54,7 +49,6 @@ public class RouletteInitializer : MonoBehaviour
 
             if (prefabIndex < 0 || prefabIndex >= sectorPrefabs.Count)
             {
-                Debug.LogWarning($"RouletteInitializer: prefab index {prefabIndex} is out of range at config position {i}.");
                 continue;
             }
 
@@ -63,20 +57,17 @@ public class RouletteInitializer : MonoBehaviour
 
             if (prefabSector == null)
             {
-                Debug.LogError($"RouletteInitializer: BaseSector component was not found on prefab '{prefab.name}' (index {prefabIndex}).");
                 continue;
             }
 
             if (prefabSector.data == null)
             {
-                Debug.LogError($"RouletteInitializer: SectorData is not assigned for prefab '{prefab.name}'.");
                 continue;
             }
 
             int sectorSize = Mathf.Max(1, prefabSector.data.size);
             if (currentSlot + sectorSize > allSlots.Count)
             {
-                Debug.LogWarning($"RouletteInitializer: sector '{prefabSector.data.Type}' does not fit from slot {currentSlot} (size {sectorSize}).");
                 continue;
             }
 
@@ -94,8 +85,6 @@ public class RouletteInitializer : MonoBehaviour
 
             currentSlot += sectorSize;
         }
-
-        Debug.Log($"Roulette initialized. Active sectors: {activeSectors.Count}");
     }
 
     private BaseSector SpawnSector(int startSlot, int size, GameObject prefab)
@@ -104,17 +93,23 @@ public class RouletteInitializer : MonoBehaviour
         Slot startSlotObj = allSlots[startSlot];
         Slot endSlotObj = allSlots[endSlot];
 
+        if (startSlotObj == null || endSlotObj == null)
+        {
+            return null;
+        }
+
         Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
-        Quaternion sectorRotation = CalculateSectorRotation(startSlotObj, endSlotObj);
+        Quaternion sectorRotation = CalculateSectorRotation(startSlot, endSlot, startSlotObj, endSlotObj);
 
-        GameObject sectorObj = Instantiate(prefab, sectorPosition, sectorRotation, transform);
+        Transform parent = ResolveSpawnParent(startSlotObj);
+        GameObject sectorObj = Instantiate(prefab, parent);
+        sectorObj.transform.SetPositionAndRotation(sectorPosition, sectorRotation);
 
-        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot, size);
+        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
         if (sector == null)
         {
-            Debug.LogError($"RouletteInitializer: spawned object '{sectorObj.name}' does not contain BaseSector component.");
             Destroy(sectorObj);
             return null;
         }
@@ -126,16 +121,35 @@ public class RouletteInitializer : MonoBehaviour
             allSlots[i].sector = sector;
             allSlots[i].index = i;
             allSlots[i].visual = sectorRenderer;
+            SetGraySlotVisible(i, false);
         }
 
-        // Keep reference to the spawned root when BaseSector is on child object.
         activeSectors.Add(sectorObj.GetComponent<BaseSector>() ?? sector);
-        Debug.Log($"Spawned {sector.data.Type} (size {size}) into slots {startSlot}-{endSlot}");
         return sector;
+    }
+
+    private Transform ResolveSpawnParent(Slot startSlot)
+    {
+        if (spawnedSectorsParent != null)
+        {
+            return spawnedSectorsParent;
+        }
+
+        if (startSlot != null && startSlot.transform.parent != null)
+        {
+            return startSlot.transform.parent;
+        }
+
+        return transform;
     }
 
     private Vector3 CalculateSectorPosition(int startSlot, int endSlot)
     {
+        if (placeAtWheelCenter)
+        {
+            return wheelCenter != null ? wheelCenter.position : transform.position;
+        }
+
         Vector3 accumulated = Vector3.zero;
         int count = 0;
 
@@ -159,18 +173,53 @@ public class RouletteInitializer : MonoBehaviour
         return accumulated / count;
     }
 
-    private Quaternion CalculateSectorRotation(Slot startSlotObj, Slot endSlotObj)
+    private Quaternion CalculateSectorRotation(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
     {
-        Quaternion sectorRotation = Quaternion.Slerp(
-            startSlotObj.transform.rotation,
-            endSlotObj.transform.rotation,
-            0.5f
-        );
+        Vector3 center = wheelCenter != null ? wheelCenter.position : transform.position;
+        Vector3 midpoint = CalculateSectorMidpoint(startSlot, endSlot, startSlotObj, endSlotObj);
+        Vector3 radial = midpoint - center;
+        if (radial.sqrMagnitude < 0.0001f)
+        {
+            Quaternion fallbackRotation = Quaternion.Slerp(
+                startSlotObj.transform.rotation,
+                endSlotObj.transform.rotation,
+                0.5f
+            );
 
+            return fallbackRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+        }
+
+        float zAngle = Mathf.Atan2(radial.y, radial.x) * Mathf.Rad2Deg;
+        Quaternion sectorRotation = Quaternion.Euler(0f, 0f, zAngle);
         return sectorRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
     }
 
-    private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot, int size)
+    private Vector3 CalculateSectorMidpoint(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
+    {
+        Vector3 sum = Vector3.zero;
+        int count = 0;
+
+        for (int i = startSlot; i <= endSlot; i++)
+        {
+            Slot slot = allSlots[i];
+            if (slot == null)
+            {
+                continue;
+            }
+
+            sum += slot.transform.position;
+            count++;
+        }
+
+        if (count > 0)
+        {
+            return sum / count;
+        }
+
+        return (startSlotObj.transform.position + endSlotObj.transform.position) * 0.5f;
+    }
+
+    private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot)
     {
         if (sectorTransform == null)
         {
@@ -187,7 +236,13 @@ public class RouletteInitializer : MonoBehaviour
             return;
         }
 
-        float visualWidth = GetRendererLocalWidth(renderer);
+        if (!autoFitSectorWidth)
+        {
+            sectorTransform.localScale = scale * radialScale;
+            return;
+        }
+
+        float visualWidth = GetRendererWorldWidth(renderer, sectorTransform.right);
         float targetWidth = CalculateTargetArcWidth(startSlot, endSlot);
         float tangentialScale = Mathf.Max(0.01f, tangentialScaleMultiplier);
 
@@ -199,21 +254,18 @@ public class RouletteInitializer : MonoBehaviour
         );
     }
 
-    private float GetRendererLocalWidth(Renderer renderer)
+    private float GetRendererWorldWidth(Renderer renderer, Vector3 widthAxis)
     {
-        MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
-        if (meshFilter != null && meshFilter.sharedMesh != null)
-        {
-            return Mathf.Max(meshFilter.sharedMesh.bounds.size.x, 0.001f);
-        }
+        Bounds bounds = renderer.bounds;
+        Vector3 axis = widthAxis.sqrMagnitude > 0.0001f ? widthAxis.normalized : Vector3.right;
 
-        SkinnedMeshRenderer skinned = renderer as SkinnedMeshRenderer;
-        if (skinned != null && skinned.sharedMesh != null)
-        {
-            return Mathf.Max(skinned.sharedMesh.bounds.size.x, 0.001f);
-        }
+        Vector3 ext = bounds.extents;
+        float projectedHalfWidth =
+            Mathf.Abs(axis.x) * ext.x +
+            Mathf.Abs(axis.y) * ext.y +
+            Mathf.Abs(axis.z) * ext.z;
 
-        return Mathf.Max(renderer.bounds.size.x, 0.001f);
+        return Mathf.Max(projectedHalfWidth * 2f, 0.001f);
     }
 
     private float CalculateTargetArcWidth(int startSlot, int endSlot)
@@ -280,6 +332,34 @@ public class RouletteInitializer : MonoBehaviour
         return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
     }
 
+    private void CaptureSlotPlaceholders()
+    {
+        if (slotPlaceholderVisuals.Count == allSlots.Count && slotPlaceholderVisuals.Count > 0)
+        {
+            return;
+        }
+
+        slotPlaceholderVisuals.Clear();
+        for (int i = 0; i < allSlots.Count; i++)
+        {
+            slotPlaceholderVisuals.Add(allSlots[i] != null ? allSlots[i].visual : null);
+        }
+    }
+
+    private void SetGraySlotVisible(int slotIndex, bool visible)
+    {
+        if (!hideGraySlots || slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count)
+        {
+            return;
+        }
+
+        Renderer placeholder = slotPlaceholderVisuals[slotIndex];
+        if (placeholder != null)
+        {
+            placeholder.enabled = visible;
+        }
+    }
+
     private void ClearRoulette()
     {
         foreach (BaseSector sector in activeSectors)
@@ -292,15 +372,17 @@ public class RouletteInitializer : MonoBehaviour
 
         activeSectors.Clear();
 
-        foreach (Slot slot in allSlots)
+        for (int i = 0; i < allSlots.Count; i++)
         {
+            Slot slot = allSlots[i];
             if (slot == null)
             {
                 continue;
             }
 
             slot.sector = null;
-            slot.visual = null;
+            slot.visual = i < slotPlaceholderVisuals.Count ? slotPlaceholderVisuals[i] : null;
+            SetGraySlotVisible(i, true);
         }
     }
 
