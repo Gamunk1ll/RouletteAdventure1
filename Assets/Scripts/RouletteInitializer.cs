@@ -15,6 +15,10 @@ public class RouletteInitializer : MonoBehaviour
     [Header("Spawn settings")]
     [Tooltip("Additional Z rotation in degrees applied to each spawned sector.")]
     public float sectorRotationOffset;
+    [Tooltip("Multiplier for spawned sector scale relative to source prefab scale.")]
+    public float sectorScaleMultiplier = 1f;
+    [Tooltip("Extra offset from wheel center for all sectors.")]
+    public Vector3 sectorPositionOffset;
 
     private readonly List<BaseSector> activeSectors = new();
     private List<int> slotToSectorMap = new();
@@ -98,26 +102,12 @@ public class RouletteInitializer : MonoBehaviour
         Slot startSlotObj = allSlots[startSlot];
         Slot endSlotObj = allSlots[endSlot];
 
-        Vector3 wheelCenter = transform.position;
-        Quaternion sectorRotation = Quaternion.Slerp(
-            startSlotObj.transform.rotation,
-            endSlotObj.transform.rotation,
-            0.5f
-        ) * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
+        Quaternion sectorRotation = CalculateSectorRotation(startSlotObj, endSlotObj);
 
-        // Spawn at roulette center and orient to the sector arc.
-        GameObject sectorObj = Instantiate(prefab, wheelCenter, sectorRotation, transform);
+        GameObject sectorObj = Instantiate(prefab, sectorPosition, sectorRotation, transform);
 
-        // Stretch sector by size.
-        float baseScale = 5f;
-        float scaleMultiplier = size * baseScale;
-
-        Vector3 currentScale = sectorObj.transform.localScale;
-        sectorObj.transform.localScale = new Vector3(
-            currentScale.x * scaleMultiplier,
-            currentScale.y * scaleMultiplier,
-            currentScale.z * scaleMultiplier
-        );
+        FitSectorScaleToSlots(sectorObj.transform, startSlotObj, endSlotObj, size);
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
         if (sector == null)
@@ -140,6 +130,72 @@ public class RouletteInitializer : MonoBehaviour
         activeSectors.Add(sectorObj.GetComponent<BaseSector>() ?? sector);
         Debug.Log($"Spawned {sector.data.Type} (size {size}) into slots {startSlot}-{endSlot}");
         return sector;
+    }
+
+    private Vector3 CalculateSectorPosition(int startSlot, int endSlot)
+    {
+        Vector3 accumulated = Vector3.zero;
+        int count = 0;
+
+        for (int i = startSlot; i <= endSlot; i++)
+        {
+            Slot slot = allSlots[i];
+            if (slot == null)
+            {
+                continue;
+            }
+
+            accumulated += slot.transform.position;
+            count++;
+        }
+
+        if (count == 0)
+        {
+            return transform.position;
+        }
+
+        return accumulated / count;
+    }
+
+    private Quaternion CalculateSectorRotation(Slot startSlotObj, Slot endSlotObj)
+    {
+        Quaternion sectorRotation = Quaternion.Slerp(
+            startSlotObj.transform.rotation,
+            endSlotObj.transform.rotation,
+            0.5f
+        );
+
+        return sectorRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+    }
+
+    private void FitSectorScaleToSlots(Transform sectorTransform, Slot startSlotObj, Slot endSlotObj, int size)
+    {
+        if (sectorTransform == null)
+        {
+            return;
+        }
+
+        Vector3 scale = sectorTransform.localScale;
+        float radialScale = Mathf.Max(0.01f, sectorScaleMultiplier);
+
+        Renderer renderer = sectorTransform.GetComponentInChildren<Renderer>(true);
+        if (renderer == null)
+        {
+            sectorTransform.localScale = scale * radialScale;
+            return;
+        }
+
+        Bounds bounds = renderer.bounds;
+        float visualWidth = Mathf.Max(bounds.size.x, 0.001f);
+        float targetWidth = Vector3.Distance(startSlotObj.transform.position, endSlotObj.transform.position);
+        targetWidth = Mathf.Max(targetWidth, 0.2f * Mathf.Max(1, size));
+
+        float widthScale = targetWidth / visualWidth;
+        sectorTransform.localScale = new Vector3(
+            scale.x * widthScale * radialScale,
+            scale.y * radialScale,
+            scale.z * radialScale
+        );
     }
 
     private static BaseSector ResolveSectorComponent(GameObject sectorObject)

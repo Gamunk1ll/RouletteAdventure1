@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class BallManager : MonoBehaviour
@@ -24,16 +25,24 @@ public class BallManager : MonoBehaviour
             return;
         }
 
-        isSpinning = true;
-
         int ballsToLaunch = currentBalls;
         currentBalls = 0;
 
         GameManager.Instance.StartPlayerTurn(ballsToLaunch);
+        StartCoroutine(LaunchBallsRoutine(ballsToLaunch));
+    }
+
+    private IEnumerator LaunchBallsRoutine(int ballsToLaunch)
+    {
+        isSpinning = true;
 
         for (int i = 0; i < ballsToLaunch; i++)
         {
-            if (!roulette.TriggerRandomSlot())
+            if (roulette.wheelRoot != null)
+            {
+                yield return roulette.SpinAndActivateRandomSlot();
+            }
+            else if (!roulette.TriggerRandomSlot())
             {
                 Debug.LogWarning("BallManager: failed to trigger slot, resolving as empty.");
                 GameManager.Instance.ResolveEmptySlot();
