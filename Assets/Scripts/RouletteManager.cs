@@ -8,15 +8,23 @@ public class RouletteManager : MonoBehaviour
 
     public List<Slot> slots = new();
 
-    [Header("Spin animation")]
+    public enum SpinAxis
+    {
+        LocalX,
+        LocalY,
+        LocalZ
+    }
     public Transform wheelRoot;
-    public float spinDuration = 1.6f;
-    public int minFullRotations = 3;
-    public int maxFullRotations = 6;
-    [Range(0f, 0.45f)] public float landingRandomness = 0.3f;
+    public SpinAxis spinAxis = SpinAxis.LocalY;
+
+    [Min(0.1f)] public float spinDuration = 1.6f;
+    [Min(0)] public int minFullRotations = 3;
+    [Min(0)] public int maxFullRotations = 6;
+    [Range(0f, 0.45f)]
+    public float landingRandomness = 0.3f;
+    public float pointerAngleOffset = 0f;
 
     private bool isSpinning;
-
     public bool IsSpinning => isSpinning;
 
     private void Awake()
@@ -28,9 +36,7 @@ public class RouletteManager : MonoBehaviour
     {
         Slot selectedSlot = GetRandomValidSlot();
         if (selectedSlot == null)
-        {
             return false;
-        }
 
         selectedSlot.Activate();
         return true;
@@ -39,15 +45,11 @@ public class RouletteManager : MonoBehaviour
     public IEnumerator SpinAndActivateRandomSlot()
     {
         if (isSpinning)
-        {
             yield break;
-        }
 
         Slot selectedSlot = GetRandomValidSlot();
         if (selectedSlot == null)
-        {
             yield break;
-        }
 
         if (wheelRoot != null)
         {
@@ -71,9 +73,7 @@ public class RouletteManager : MonoBehaviour
         foreach (Slot slot in slots)
         {
             if (slot != null)
-            {
                 validSlots.Add(slot);
-            }
         }
 
         if (validSlots.Count == 0)
@@ -82,18 +82,26 @@ public class RouletteManager : MonoBehaviour
             return null;
         }
 
-        int index = Random.Range(0, validSlots.Count);
-        return validSlots[index];
+        return validSlots[Random.Range(0, validSlots.Count)];
     }
 
     private IEnumerator SpinToSlot(Slot targetSlot)
     {
-        float startAngle = wheelRoot.eulerAngles.z;
+
+        int minRot = Mathf.Min(minFullRotations, maxFullRotations);
+        int maxRot = Mathf.Max(minFullRotations, maxFullRotations);
+
+        Vector3 baseEuler = wheelRoot.localEulerAngles;
+        float startAxisAngle = GetAxisValue(baseEuler);
+
         float slotAngle = GetSlotAngle(targetSlot);
         float randomOffset = GetRandomSectorOffset();
-        int fullRotations = Random.Range(minFullRotations, maxFullRotations + 1);
-
-        float targetAngle = startAngle + fullRotations * 360f + (360f - slotAngle) + randomOffset;
+        int fullRotations = Random.Range(minRot, maxRot + 1);
+        float targetAxisAngle = startAxisAngle
+                                + fullRotations * 360f
+                                + (360f - slotAngle)
+                                + pointerAngleOffset
+                                + randomOffset;
 
         float elapsed = 0f;
         while (elapsed < spinDuration)
@@ -102,35 +110,63 @@ public class RouletteManager : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / spinDuration);
             float eased = 1f - Mathf.Pow(1f - t, 3f);
 
-            float currentAngle = Mathf.LerpAngle(startAngle, targetAngle, eased);
-            wheelRoot.rotation = Quaternion.Euler(0f, 0f, currentAngle);
+            float currentAxisAngle = Mathf.Lerp(startAxisAngle, targetAxisAngle, eased);
+
+            Vector3 euler = baseEuler;
+            SetAxisValue(ref euler, currentAxisAngle);
+            wheelRoot.localRotation = Quaternion.Euler(euler);
+
             yield return null;
         }
 
-        wheelRoot.rotation = Quaternion.Euler(0f, 0f, targetAngle);
+        Vector3 finalEuler = baseEuler;
+        SetAxisValue(ref finalEuler, targetAxisAngle);
+        wheelRoot.localRotation = Quaternion.Euler(finalEuler);
     }
 
     private float GetSlotAngle(Slot slot)
     {
         if (slot == null)
-        {
             return 0f;
-        }
 
         Vector3 localSlot = transform.InverseTransformPoint(slot.transform.position);
-        float angle = Mathf.Atan2(localSlot.y, localSlot.x) * Mathf.Rad2Deg;
+        float angle = Mathf.Atan2(localSlot.z, localSlot.x) * Mathf.Rad2Deg;
         return (angle + 360f) % 360f;
     }
 
     private float GetRandomSectorOffset()
     {
         if (slots == null || slots.Count == 0)
-        {
             return 0f;
-        }
 
         float sectorAngle = 360f / slots.Count;
         float maxOffset = sectorAngle * landingRandomness;
         return Random.Range(-maxOffset, maxOffset);
+    }
+
+    private float GetAxisValue(Vector3 euler)
+    {
+        switch (spinAxis)
+        {
+            case SpinAxis.LocalX: return euler.x;
+            case SpinAxis.LocalY: return euler.y;
+            default: return euler.z;
+        }
+    }
+
+    private void SetAxisValue(ref Vector3 euler, float value)
+    {
+        switch (spinAxis)
+        {
+            case SpinAxis.LocalX:
+                euler.x = value;
+                break;
+            case SpinAxis.LocalY:
+                euler.y = value;
+                break;
+            default:
+                euler.z = value;
+                break;
+        }
     }
 }

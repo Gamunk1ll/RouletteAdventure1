@@ -1482,7 +1482,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1325590253}
   - component: {fileID: 1325590252}
-  - component: {fileID: 1325590251}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1490,18 +1489,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1325590251
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1325590250}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
 --- !u!108 &1325590252
 Light:
   m_ObjectHideFlags: 0
@@ -1774,8 +1761,12 @@ MonoBehaviour:
   shopPanel: {fileID: 0}
   battleUI: {fileID: 0}
   victoryPanel: {fileID: 0}
+  shop: {fileID: 0}
+  stageController: {fileID: 0}
   currentWave: 1
   totalWaves: 15
+  shopOpenDelay: 0.8
+  shopCloseDelay: 0.8
 --- !u!114 &1458700648
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1788,7 +1779,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab7174bc1408733499ab16fef1e51e7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoinVisual
-  coinPrefab: {fileID: 9026666930039663203, guid: 8b7209d5980987f4f8c9d38934298162, type: 3}
+  coinPrefab: {fileID: 2193518023615559080, guid: 28b0d3d9ac26e5749802dab6e4ec94e1, type: 3}
   spawnArea: {fileID: 1970005658}
   spawnAreaSize: {x: 5, y: 3}
   spawnHeight: 0.5
@@ -1845,6 +1836,9 @@ MonoBehaviour:
   - {fileID: 6189366498761042820, guid: 7814b0e5314c8f840a9846b40ce691ad, type: 3}
   - {fileID: 3067784618816630629, guid: de5f5d7effa957d43919cf65e7fe0a5e, type: 3}
   startingConfiguration: 02000000000000000100000002000000000000000100000002000000
+  sectorRotationOffset: 0
+  sectorScaleMultiplier: 1
+  sectorPositionOffset: {x: 0, y: 0, z: 0}
 --- !u!4 &1554135356
 Transform:
   m_ObjectHideFlags: 0
@@ -2361,8 +2355,8 @@ Transform:
   m_GameObject: {fileID: 2036256031}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.6683798, y: -0.47261, z: -9.38707}
-  m_LocalScale: {x: 8, y: 0.75036496, z: 8}
+  m_LocalPosition: {x: 7.4, y: -0.47261, z: -0.4}
+  m_LocalScale: {x: 40.1736, y: 3.7681077, z: 40.1736}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -3278,7 +3272,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2079611718575383854, guid: dab27e5492026fe47955785fd41578a2, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.84038
+      value: 21.96038
       objectReference: {fileID: 0}
     - target: {fileID: 2079611718575383854, guid: dab27e5492026fe47955785fd41578a2, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3615,7 +3609,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8211264674474525807, guid: fec657ef729cec7478ccabf6dfc9fab8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.84038
+      value: 26.57
       objectReference: {fileID: 0}
     - target: {fileID: 8211264674474525807, guid: fec657ef729cec7478ccabf6dfc9fab8, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3662,7 +3656,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1044358159903883614}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.12248779, y: -0, z: -0, w: 0.99247}
+  m_LocalRotation: {x: -0.08185158, y: 0, z: 0, w: 0.9966445}
   m_LocalPosition: {x: 0.08698, y: 4.92, z: -3.29}
   m_LocalScale: {x: 2.6087, y: 2.6087, z: 2.6087}
   m_ConstrainProportionsScale: 0
@@ -3685,7 +3679,7 @@ Transform:
   - {fileID: 125376303211063554}
   - {fileID: 547688342151990716}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -14.071, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -9.39, y: 0, z: 0}
 --- !u!114 &6135660997337371405
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3715,6 +3709,13 @@ MonoBehaviour:
   - {fileID: 274680187}
   - {fileID: 1433027471}
   - {fileID: 328247712}
+  wheelRoot: {fileID: 6135660997337371404}
+  spinAxis: 1
+  spinDuration: 1.6
+  minFullRotations: 3
+  maxFullRotations: 6
+  landingRandomness: 0.3
+  pointerAngleOffset: 22
 --- !u!33 &6298427484324647217
 MeshFilter:
   m_ObjectHideFlags: 0
