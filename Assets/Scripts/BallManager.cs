@@ -36,17 +36,19 @@ public class BallManager : MonoBehaviour
     {
         isSpinning = true;
 
+        if (ballsToLaunch <= 0)
+        {
+            isSpinning = false;
+            yield break;
+        }
+        if (roulette.wheelRoot != null)
+        {
+            yield return roulette.SpinVisualOnly();
+        }
         for (int i = 0; i < ballsToLaunch; i++)
         {
-            if (roulette.wheelRoot != null)
-            {
-                yield return roulette.SpinAndActivateRandomSlot();
-            }
-            else if (!roulette.TriggerRandomSlot())
-            {
-                Debug.LogWarning("BallManager: failed to trigger slot, resolving as empty.");
+            if (!roulette.TriggerRandomSlot())
                 GameManager.Instance.ResolveEmptySlot();
-            }
         }
 
         isSpinning = false;
