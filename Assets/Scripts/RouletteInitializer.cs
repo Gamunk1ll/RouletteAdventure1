@@ -17,6 +17,8 @@ public class RouletteInitializer : MonoBehaviour
     public float sectorRotationOffset;
     [Tooltip("Multiplier for spawned sector scale relative to source prefab scale.")]
     public float sectorScaleMultiplier = 1f;
+    [Tooltip("Additional tangential scale multiplier (around roulette ring).")]
+    public float tangentialScaleMultiplier = 1f;
     [Tooltip("Extra offset from wheel center for all sectors.")]
     public Vector3 sectorPositionOffset;
 
@@ -107,7 +109,7 @@ public class RouletteInitializer : MonoBehaviour
 
         GameObject sectorObj = Instantiate(prefab, sectorPosition, sectorRotation, transform);
 
-        FitSectorScaleToSlots(sectorObj.transform, startSlotObj, endSlotObj, size);
+        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot, size);
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
         if (sector == null)
@@ -168,7 +170,7 @@ public class RouletteInitializer : MonoBehaviour
         return sectorRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
     }
 
-    private void FitSectorScaleToSlots(Transform sectorTransform, Slot startSlotObj, Slot endSlotObj, int size)
+    private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot, int size)
     {
         if (sectorTransform == null)
         {
@@ -185,17 +187,86 @@ public class RouletteInitializer : MonoBehaviour
             return;
         }
 
-        Bounds bounds = renderer.bounds;
-        float visualWidth = Mathf.Max(bounds.size.x, 0.001f);
-        float targetWidth = Vector3.Distance(startSlotObj.transform.position, endSlotObj.transform.position);
-        targetWidth = Mathf.Max(targetWidth, 0.2f * Mathf.Max(1, size));
+        float visualWidth = GetRendererLocalWidth(renderer);
+        float targetWidth = CalculateTargetArcWidth(startSlot, endSlot);
+        float tangentialScale = Mathf.Max(0.01f, tangentialScaleMultiplier);
 
         float widthScale = targetWidth / visualWidth;
         sectorTransform.localScale = new Vector3(
-            scale.x * widthScale * radialScale,
+            scale.x * widthScale * radialScale * tangentialScale,
             scale.y * radialScale,
             scale.z * radialScale
         );
+    }
+
+    private float GetRendererLocalWidth(Renderer renderer)
+    {
+        MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.sharedMesh != null)
+        {
+            return Mathf.Max(meshFilter.sharedMesh.bounds.size.x, 0.001f);
+        }
+
+        SkinnedMeshRenderer skinned = renderer as SkinnedMeshRenderer;
+        if (skinned != null && skinned.sharedMesh != null)
+        {
+            return Mathf.Max(skinned.sharedMesh.bounds.size.x, 0.001f);
+        }
+
+        return Mathf.Max(renderer.bounds.size.x, 0.001f);
+    }
+
+    private float CalculateTargetArcWidth(int startSlot, int endSlot)
+    {
+        if (allSlots == null || allSlots.Count == 0)
+        {
+            return 0.2f;
+        }
+
+        float width = 0f;
+        for (int i = startSlot; i < endSlot; i++)
+        {
+            width += Vector3.Distance(allSlots[i].transform.position, allSlots[i + 1].transform.position);
+        }
+
+        if (width <= 0.001f)
+        {
+            width = EstimateSingleSlotWidth(startSlot);
+        }
+
+        return Mathf.Max(width, 0.2f);
+    }
+
+    private float EstimateSingleSlotWidth(int slotIndex)
+    {
+        if (allSlots == null || allSlots.Count < 2)
+        {
+            return 0.2f;
+        }
+
+        int previous = Mathf.Max(0, slotIndex - 1);
+        int next = Mathf.Min(allSlots.Count - 1, slotIndex + 1);
+
+        float previousDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[previous].transform.position);
+        float nextDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[next].transform.position);
+
+        float estimated = 0f;
+        if (slotIndex > 0)
+        {
+            estimated += previousDistance;
+        }
+
+        if (slotIndex < allSlots.Count - 1)
+        {
+            estimated += nextDistance;
+        }
+
+        if (slotIndex > 0 && slotIndex < allSlots.Count - 1)
+        {
+            estimated *= 0.5f;
+        }
+
+        return Mathf.Max(estimated, 0.2f);
     }
 
     private static BaseSector ResolveSectorComponent(GameObject sectorObject)
