@@ -7,6 +7,10 @@ public class RouletteInitializer : MonoBehaviour
     public List<GameObject> sectorPrefabs = new();
     public List<int> startingConfiguration = new();
     public float sectorRotationOffset;
+    public float referenceSectorAngleZ = 180.5f;
+    public int referenceStartSlot = 0;
+    public int referenceSectorSize = 2;
+    public bool rotateClockwise = true;
     public float sectorScaleMultiplier = 1f;
     public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
@@ -98,14 +102,14 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
-        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
-        Quaternion sectorRotation = CalculateSectorRotation(startSlot, endSlot, startSlotObj, endSlotObj);
-
         Transform parent = ResolveSpawnParent(startSlotObj);
-        GameObject sectorObj = Instantiate(prefab, parent);
-        sectorObj.transform.SetPositionAndRotation(sectorPosition, sectorRotation);
+        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
+        BaseSector prefabSector = ResolveSectorComponent(prefab);
 
-        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
+        GameObject sectorObj = Instantiate(prefab, parent, false);
+        sectorObj.transform.localPosition = parent != null
+            ? parent.InverseTransformPoint(sectorPosition)
+            : sectorPosition;
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
         if (sector == null)
@@ -114,13 +118,42 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
-        Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
+        List<Renderer> slotRenderers = SpawnSlotVisuals(sectorObj.transform, prefabSector, startSlot, endSlot);
+        bool usingPerSlotVisuals = slotRenderers.Count == size;
+
+        if (!usingPerSlotVisuals)
+        {
+            Quaternion computedSectorRotation = CalculateSectorLocalRotation(
+                startSlot,
+                size,
+                prefabSector
+            );
+
+            sectorObj.transform.localRotation = computedSectorRotation;
+            FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
+        }
+        else
+        {
+            sectorObj.transform.localRotation = Quaternion.identity;
+            sectorObj.transform.localScale = Vector3.one;
+
+            foreach (Renderer ownRenderer in sectorObj.GetComponents<Renderer>())
+            {
+                ownRenderer.enabled = false;
+            }
+        }
+
+        Renderer sectorRenderer = usingPerSlotVisuals
+            ? slotRenderers[0]
+            : sector.GetComponentInChildren<Renderer>(true);
 
         for (int i = startSlot; i <= endSlot; i++)
         {
             allSlots[i].sector = sector;
             allSlots[i].index = i;
-            allSlots[i].visual = sectorRenderer;
+            allSlots[i].visual = usingPerSlotVisuals
+                ? slotRenderers[i - startSlot]
+                : sectorRenderer;
             SetGraySlotVisible(i, false);
         }
 
@@ -173,50 +206,73 @@ public class RouletteInitializer : MonoBehaviour
         return accumulated / count;
     }
 
-    private Quaternion CalculateSectorRotation(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
+    private Quaternion CalculateSectorLocalRotation(int startSlot, int size, BaseSector prefabSector)
     {
-        Vector3 center = wheelCenter != null ? wheelCenter.position : transform.position;
-        Vector3 midpoint = CalculateSectorMidpoint(startSlot, endSlot, startSlotObj, endSlotObj);
-        Vector3 radial = midpoint - center;
-        if (radial.sqrMagnitude < 0.0001f)
+        if (allSlots == null || allSlots.Count == 0)
         {
-            Quaternion fallbackRotation = Quaternion.Slerp(
-                startSlotObj.transform.rotation,
-                endSlotObj.transform.rotation,
-                0.5f
-            );
-
-            return fallbackRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+            return prefabSector != null ? prefabSector.transform.localRotation : Quaternion.identity;
         }
 
-        float zAngle = Mathf.Atan2(radial.y, radial.x) * Mathf.Rad2Deg;
-        Quaternion sectorRotation = Quaternion.Euler(0f, 0f, zAngle);
-        return sectorRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+        float anglePerSlot = 360f / allSlots.Count;
+        float centerIndex = startSlot + (size - 1) * 0.5f;
+        float referenceCenterIndex = referenceStartSlot + (Mathf.Max(1, referenceSectorSize) - 1) * 0.5f;
+        float direction = rotateClockwise ? -1f : 1f;
+        float visualOffsetZ = prefabSector != null ? prefabSector.visualRotationOffsetZ : 0f;
+        Vector3 prefabEuler = prefabSector != null
+            ? prefabSector.transform.localEulerAngles
+            : Vector3.zero;
+
+        float zAngle =
+            referenceSectorAngleZ +
+            (centerIndex - referenceCenterIndex) * anglePerSlot * direction +
+            sectorRotationOffset +
+            visualOffsetZ;
+
+        return Quaternion.Euler(prefabEuler.x, prefabEuler.y, zAngle);
     }
 
-    private Vector3 CalculateSectorMidpoint(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
+    private List<Renderer> SpawnSlotVisuals(Transform sectorRoot, BaseSector prefabSector, int startSlot, int endSlot)
     {
-        Vector3 sum = Vector3.zero;
-        int count = 0;
+        List<Renderer> renderers = new();
 
-        for (int i = startSlot; i <= endSlot; i++)
+        if (sectorRoot == null || prefabSector == null || prefabSector.data == null || prefabSector.data.visualPrefab == null)
         {
-            Slot slot = allSlots[i];
-            if (slot == null)
+            return renderers;
+        }
+
+        GameObject visualPrefab = prefabSector.data.visualPrefab;
+        Vector3 visualScale = visualPrefab.transform.localScale;
+        Vector3 visualEuler = visualPrefab.transform.localEulerAngles;
+
+        for (int slotIndex = startSlot; slotIndex <= endSlot; slotIndex++)
+        {
+            GameObject visualObj = Instantiate(visualPrefab, sectorRoot, false);
+            visualObj.name = $"{visualPrefab.name}_Slot{slotIndex}";
+            visualObj.transform.localPosition = Vector3.zero;
+            visualObj.transform.localRotation = CalculateSingleSlotVisualRotation(slotIndex, visualEuler);
+            visualObj.transform.localScale = visualScale;
+
+            Renderer renderer = visualObj.GetComponentInChildren<Renderer>(true);
+            if (renderer != null)
             {
-                continue;
+                renderers.Add(renderer);
             }
-
-            sum += slot.transform.position;
-            count++;
         }
 
-        if (count > 0)
-        {
-            return sum / count;
-        }
+        return renderers;
+    }
 
-        return (startSlotObj.transform.position + endSlotObj.transform.position) * 0.5f;
+    private Quaternion CalculateSingleSlotVisualRotation(int slotIndex, Vector3 baseVisualEuler)
+    {
+        float anglePerSlot = allSlots.Count > 0 ? 360f / allSlots.Count : 0f;
+        float referenceCenterIndex = referenceStartSlot + (Mathf.Max(1, referenceSectorSize) - 1) * 0.5f;
+        float direction = rotateClockwise ? -1f : 1f;
+        float zAngle =
+            referenceSectorAngleZ +
+            (slotIndex - referenceCenterIndex) * anglePerSlot * direction +
+            sectorRotationOffset;
+
+        return Quaternion.Euler(baseVisualEuler.x, baseVisualEuler.y, zAngle);
     }
 
     private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot)
