@@ -59,12 +59,7 @@ public class RouletteInitializer : MonoBehaviour
             GameObject prefab = sectorPrefabs[prefabIndex];
             BaseSector prefabSector = ResolveSectorComponent(prefab);
 
-            if (prefabSector == null)
-            {
-                continue;
-            }
-
-            if (prefabSector.data == null)
+            if (prefabSector == null || prefabSector.data == null)
             {
                 continue;
             }
