@@ -1870,7 +1870,7 @@ MonoBehaviour:
   startingConfiguration: 02000000000000000100000002000000000000000100000002000000
   sectorRotationOffset: 0
   referenceSectorAngleZ: 180.5
-  referenceStartSlot: 0
+  referenceStartSlot: 1
   referenceSectorSize: 2
   rotateClockwise: 1
   sectorScaleMultiplier: 0.33
