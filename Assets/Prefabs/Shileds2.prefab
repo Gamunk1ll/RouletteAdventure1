@@ -104,4 +104,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a32cc6b173c4e14ebcfc5296a2380e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseSector
+  visualRotationOffsetZ: 0
   data: {fileID: 11400000, guid: fb3ddbc9584a5934ba9f306926de1a8d, type: 2}
