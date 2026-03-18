@@ -59,12 +59,7 @@ public class RouletteInitializer : MonoBehaviour
             GameObject prefab = sectorPrefabs[prefabIndex];
             BaseSector prefabSector = ResolveSectorComponent(prefab);
 
-            if (prefabSector == null)
-            {
-                continue;
-            }
-
-            if (prefabSector.data == null)
+            if (prefabSector == null || prefabSector.data == null)
             {
                 continue;
             }
@@ -133,7 +128,9 @@ public class RouletteInitializer : MonoBehaviour
         {
             allSlots[i].sector = sector;
             allSlots[i].index = i;
-            allSlots[i].visual = sectorRenderer;
+            allSlots[i].visual = usingPerSlotVisuals
+                ? slotRenderers[i - startSlot]
+                : sectorRenderer;
             SetGraySlotVisible(i, false);
         }
 
