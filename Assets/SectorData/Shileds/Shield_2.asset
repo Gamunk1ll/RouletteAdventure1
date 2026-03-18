@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Shield_2
   m_EditorClassIdentifier: Assembly-CSharp::SectorData
   Type: 1
-  basePower: 5
+  basePower: 7
   size: 2
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 213249063651608746, guid: bf2712809571ce14d86d6d4f07e18300, type: 3}
+  visualPrefab: {fileID: 5721625589065660621, guid: eaabd38a1735ffe45bfb12a2267e4f0f, type: 3}
   visualRotationOffsetZ: 0

@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Attack_2
   m_EditorClassIdentifier: Assembly-CSharp::SectorData
   Type: 0
-  basePower: 6
-  size: 3
+  basePower: 9
+  size: 2
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 1242263836898280782, guid: 27e526cfdcfd7a84a942f8edf1947196, type: 3}
+  visualPrefab: {fileID: 0}
   visualRotationOffsetZ: 11.25
