@@ -20,4 +20,7 @@ public class SectorData : ScriptableObject
 
     [Header("3D Model")]
     public GameObject visualPrefab;
+
+    [Header("Placement")]
+    public float visualRotationOffsetZ;
 }

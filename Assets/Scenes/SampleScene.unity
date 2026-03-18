@@ -1870,7 +1870,7 @@ MonoBehaviour:
   startingConfiguration: 02000000000000000100000002000000000000000100000002000000
   sectorRotationOffset: 0
   referenceSectorAngleZ: 180.5
-  referenceStartSlot: 1
+  referenceStartSlot: 0
   referenceSectorSize: 2
   rotateClockwise: 1
   sectorScaleMultiplier: 0.33
@@ -1880,7 +1880,7 @@ MonoBehaviour:
   wheelCenter: {fileID: 1930433387}
   spawnedSectorsParent: {fileID: 1958504762}
   sectorPositionOffset: {x: 0, y: 0, z: 0}
-  hideGraySlots: 1
+  hideGraySlots: 0
 --- !u!4 &1554135356
 Transform:
   m_ObjectHideFlags: 0
