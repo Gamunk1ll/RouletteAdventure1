@@ -3,6 +3,7 @@ using UnityEngine;
 public class BaseSector : MonoBehaviour
 {
     public SectorData data;
+    public float visualRotationOffsetZ;
 
     public int GetPower()
     {
