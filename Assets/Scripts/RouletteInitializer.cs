@@ -55,12 +55,7 @@ public class RouletteInitializer : MonoBehaviour
             GameObject prefab = sectorPrefabs[prefabIndex];
             BaseSector prefabSector = ResolveSectorComponent(prefab);
 
-            if (prefabSector == null)
-            {
-                continue;
-            }
-
-            if (prefabSector.data == null)
+            if (prefabSector == null || prefabSector.data == null)
             {
                 continue;
             }
@@ -98,12 +93,29 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
-        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
-        Quaternion sectorRotation = CalculateSectorRotation(startSlot, endSlot, startSlotObj, endSlotObj);
-
         Transform parent = ResolveSpawnParent(startSlotObj);
-        GameObject sectorObj = Instantiate(prefab, parent);
-        sectorObj.transform.SetPositionAndRotation(sectorPosition, sectorRotation);
+        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
+
+        BaseSector prefabSector = ResolveSectorComponent(prefab);
+        float prefabRotationOffsetZ = 0f;
+
+        if (prefabSector != null && prefabSector.data != null)
+        {
+            prefabRotationOffsetZ = prefabSector.data.visualRotationOffsetZ;
+        }
+
+        Quaternion sectorLocalRotation = CalculateSectorLocalRotation(
+            startSlot,
+            size,
+            prefab.transform.localRotation,
+            prefabRotationOffsetZ
+        );
+
+        GameObject sectorObj = Instantiate(prefab, parent, false);
+        sectorObj.transform.localPosition = parent != null
+            ? parent.InverseTransformPoint(sectorPosition)
+            : sectorPosition;
+        sectorObj.transform.localRotation = sectorLocalRotation;
 
         FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
@@ -173,50 +185,33 @@ public class RouletteInitializer : MonoBehaviour
         return accumulated / count;
     }
 
-    private Quaternion CalculateSectorRotation(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
+    private Quaternion CalculateSectorLocalRotation(
+        int startSlot,
+        int size,
+        Quaternion prefabLocalRotation,
+        float prefabRotationOffsetZ
+    )
     {
-        Vector3 center = wheelCenter != null ? wheelCenter.position : transform.position;
-        Vector3 midpoint = CalculateSectorMidpoint(startSlot, endSlot, startSlotObj, endSlotObj);
-        Vector3 radial = midpoint - center;
-        if (radial.sqrMagnitude < 0.0001f)
+        if (allSlots == null || allSlots.Count == 0)
         {
-            Quaternion fallbackRotation = Quaternion.Slerp(
-                startSlotObj.transform.rotation,
-                endSlotObj.transform.rotation,
-                0.5f
-            );
-
-            return fallbackRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
+            return prefabLocalRotation;
         }
 
-        float zAngle = Mathf.Atan2(radial.y, radial.x) * Mathf.Rad2Deg;
-        Quaternion sectorRotation = Quaternion.Euler(0f, 0f, zAngle);
-        return sectorRotation * Quaternion.Euler(0f, 0f, sectorRotationOffset);
-    }
+        float anglePerSlot = 360f / allSlots.Count;
+        float centerIndex = startSlot + (size - 1) * 0.5f;
+        float referenceCenterIndex = 0.5f;
+        float referenceZAngle = 180.5f;
 
-    private Vector3 CalculateSectorMidpoint(int startSlot, int endSlot, Slot startSlotObj, Slot endSlotObj)
-    {
-        Vector3 sum = Vector3.zero;
-        int count = 0;
+        float zAngle = referenceZAngle - (centerIndex - referenceCenterIndex) * anglePerSlot;
+        // float zAngle = referenceZAngle + (centerIndex - referenceCenterIndex) * anglePerSlot;
 
-        for (int i = startSlot; i <= endSlot; i++)
-        {
-            Slot slot = allSlots[i];
-            if (slot == null)
-            {
-                continue;
-            }
+        Vector3 prefabEuler = prefabLocalRotation.eulerAngles;
 
-            sum += slot.transform.position;
-            count++;
-        }
-
-        if (count > 0)
-        {
-            return sum / count;
-        }
-
-        return (startSlotObj.transform.position + endSlotObj.transform.position) * 0.5f;
+        return Quaternion.Euler(
+            prefabEuler.x,
+            prefabEuler.y,
+            zAngle + sectorRotationOffset + prefabRotationOffsetZ
+        );
     }
 
     private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot)

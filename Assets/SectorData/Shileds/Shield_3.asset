@@ -10,12 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9343da3c369ffaa42a684a3e33ec08e8, type: 3}
-  m_Name: Attack_3
+  m_Name: Shield_3
   m_EditorClassIdentifier: Assembly-CSharp::SectorData
-  Type: 0
-  basePower: 6
-  size: 3
+  Type: 1
+  basePower: 5
+  size: 2
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 1242263836898280782, guid: 27e526cfdcfd7a84a942f8edf1947196, type: 3}
+  visualPrefab: {fileID: 213249063651608746, guid: bf2712809571ce14d86d6d4f07e18300, type: 3}
+  visualRotationOffsetZ: 0
