@@ -112,7 +112,10 @@ public class RouletteInitializer : MonoBehaviour
             : sectorPosition;
         sectorObj.transform.localRotation = sectorLocalRotation;
 
-        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
+        GameObject sectorObj = Instantiate(prefab, parent, false);
+        sectorObj.transform.localPosition = parent != null
+            ? parent.InverseTransformPoint(sectorPosition)
+            : sectorPosition;
 
         BaseSector sector = ResolveSectorComponent(sectorObj);
         if (sector == null)
@@ -121,13 +124,38 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
-        Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
+        List<Renderer> slotRenderers = SpawnSlotVisuals(sectorObj.transform, prefabSector, startSlot, endSlot);
+        bool usingPerSlotVisuals = slotRenderers.Count == size;
+
+        if (!usingPerSlotVisuals)
+        {
+            Quaternion sectorLocalRotation = CalculateSectorLocalRotation(
+                startSlot,
+                size,
+                prefabSector
+            );
+
+            sectorObj.transform.localRotation = sectorLocalRotation;
+            FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
+        }
+        else
+        {
+            sectorObj.transform.localRotation = Quaternion.identity;
+            sectorObj.transform.localScale = Vector3.one;
+            SetOwnRenderersEnabled(sectorObj, false);
+        }
+
+        Renderer sectorRenderer = usingPerSlotVisuals
+            ? slotRenderers[0]
+            : sector.GetComponentInChildren<Renderer>(true);
 
         for (int i = startSlot; i <= endSlot; i++)
         {
             allSlots[i].sector = sector;
             allSlots[i].index = i;
-            allSlots[i].visual = sectorRenderer;
+            allSlots[i].visual = usingPerSlotVisuals
+                ? slotRenderers[i - startSlot]
+                : sectorRenderer;
             SetGraySlotVisible(i, false);
         }
 
