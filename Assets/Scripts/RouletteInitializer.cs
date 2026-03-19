@@ -123,6 +123,8 @@ public class RouletteInitializer : MonoBehaviour
         FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
         Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
+        Renderer[] slotRenderers = sector.GetComponentsInChildren<Renderer>(true);
+        bool usingPerSlotVisuals = slotRenderers.Length >= size;
 
         for (int i = startSlot; i <= endSlot; i++)
         {
