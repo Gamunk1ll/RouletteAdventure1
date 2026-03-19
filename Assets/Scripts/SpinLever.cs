@@ -3,19 +3,26 @@ using UnityEngine;
 
 public class SpinLever : MonoBehaviour
 {
-    [Header("References")]
     public BallManager ballManager;
     public Transform leverPivot;
-
-    [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField, Min(0f)] private float fallbackLaunchDelay = 0.2f;
-
-    [Header("Debug")]
+    [SerializeField, Min(0f)] private float fallbackResetDelay = 0.8f;
     [SerializeField] private bool isSpinning;
+
+    // === НОВЫЕ ПОЛЯ ДЛЯ СВЕЧЕНИЯ ===
+    [Header("Glow Settings")]
+    [SerializeField] private float glowIntensity = 3f;
+    [SerializeField] private Color glowColor = Color.yellow;
+
+    private Renderer objectRenderer;
+    private MaterialPropertyBlock propertyBlock;
+    private int emissionID;
+    // =================================
 
     private Quaternion initialLocalRotation;
     private Coroutine fallbackLaunchRoutine;
+    private Coroutine fallbackResetRoutine;
     private bool launchTriggered;
 
     private Transform ActivePivot => leverPivot != null ? leverPivot : transform;
@@ -24,12 +31,63 @@ public class SpinLever : MonoBehaviour
     {
         ResolveReferences();
         initialLocalRotation = ActivePivot.localRotation;
+        InitGlow(); // Инициализация свечения
     }
 
     private void Start()
     {
         ResolveReferences();
     }
+
+    // === НОВЫЕ МЕТОДЫ ДЛЯ СВЕЧЕНИЯ ===
+    private void InitGlow()
+    {
+        objectRenderer = GetComponent<Renderer>();
+        if (objectRenderer == null)
+            objectRenderer = GetComponentInChildren<Renderer>();
+
+        propertyBlock = new MaterialPropertyBlock();
+        emissionID = Shader.PropertyToID("_EmissionColor");
+
+        // Выключаем свечение по умолчанию
+        SetGlow(false);
+    }
+
+    private void OnMouseEnter()
+    {
+        // Включаем свечение при наведении
+        SetGlow(true);
+    }
+
+    private void OnMouseExit()
+    {
+        // Выключаем свечение при уходе мыши
+        SetGlow(false);
+    }
+
+    private void SetGlow(bool enable)
+    {
+        if (objectRenderer == null) return;
+
+        objectRenderer.GetPropertyBlock(propertyBlock);
+
+        Color emissionColor = enable ? glowColor * glowIntensity : Color.black;
+        propertyBlock.SetColor(emissionID, emissionColor);
+
+        objectRenderer.SetPropertyBlock(propertyBlock);
+    }
+
+    // Метод для вызова свечения из анимации (если нужно)
+    public void TriggerGlowAnimation()
+    {
+        SetGlow(true);
+    }
+
+    public void StopGlowAnimation()
+    {
+        SetGlow(false);
+    }
+    // =================================
 
     private void OnMouseDown()
     {
@@ -44,9 +102,17 @@ public class SpinLever : MonoBehaviour
             fallbackLaunchRoutine = null;
         }
 
+        if (fallbackResetRoutine != null)
+        {
+            StopCoroutine(fallbackResetRoutine);
+            fallbackResetRoutine = null;
+        }
+
         ActivePivot.localRotation = initialLocalRotation;
         isSpinning = false;
         launchTriggered = false;
+
+        SetGlow(false); // Выключаем свечение при отключении
     }
 
     private void ResolveReferences()
@@ -74,7 +140,6 @@ public class SpinLever : MonoBehaviour
 
         if (ballManager == null)
         {
-            Debug.LogError("[SpinLever] BallManager reference is missing.");
             return;
         }
 
@@ -92,15 +157,17 @@ public class SpinLever : MonoBehaviour
         if (fallbackLaunchRoutine != null)
             StopCoroutine(fallbackLaunchRoutine);
 
+        if (fallbackResetRoutine != null)
+            StopCoroutine(fallbackResetRoutine);
+
         if (animator != null && animator.runtimeAnimatorController != null)
         {
             animator.ResetTrigger("Pull");
             animator.SetTrigger("Pull");
             fallbackLaunchRoutine = StartCoroutine(FallbackLaunchRoutine());
+            fallbackResetRoutine = StartCoroutine(FallbackResetRoutine());
             return;
         }
-
-        Debug.LogWarning("[SpinLever] Animator was not found, starting roulette without lever animation.");
         OnLeverPressed();
         OnAnimationComplete();
     }
@@ -116,12 +183,27 @@ public class SpinLever : MonoBehaviour
             OnLeverPressed();
     }
 
+    private IEnumerator FallbackResetRoutine()
+    {
+        if (fallbackResetDelay > 0f)
+            yield return new WaitForSeconds(fallbackResetDelay);
+
+        fallbackResetRoutine = null;
+        OnAnimationComplete();
+    }
+
     public void OnAnimationComplete()
     {
         if (fallbackLaunchRoutine != null)
         {
             StopCoroutine(fallbackLaunchRoutine);
             fallbackLaunchRoutine = null;
+        }
+
+        if (fallbackResetRoutine != null)
+        {
+            StopCoroutine(fallbackResetRoutine);
+            fallbackResetRoutine = null;
         }
 
         isSpinning = false;
