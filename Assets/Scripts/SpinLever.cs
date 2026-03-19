@@ -1,30 +1,51 @@
+using System.Collections;
 using UnityEngine;
 
 public class SpinLever : MonoBehaviour
 {
     [Header("References")]
     public BallManager ballManager;
+    public Renderer hoverRenderer;
+    public Transform leverPivot;
+
+    [Header("Interaction")]
+    public Color hoverColor = Color.yellow;
+
+    [Header("Animation")]
+    [Min(0f)] public float pressAngle = 35f;
+    [Min(0.01f)] public float pressDuration = 0.12f;
+    [Min(0.01f)] public float releaseDuration = 0.2f;
+    public Vector3 pressAxis = Vector3.forward;
 
     [Header("Debug")]
-    private bool isSpinning = false;
+    [SerializeField] private bool isSpinning;
+
     private Color originalColor;
-    private Renderer leverRenderer;
-    private bool isHovering = false;
+    private Renderer cachedRenderer;
+    private bool isHovering;
+    private Quaternion initialLocalRotation;
+    private Coroutine leverAnimationRoutine;
 
-    void Start()
+    private Renderer ActiveRenderer => hoverRenderer != null ? hoverRenderer : cachedRenderer;
+    private Transform ActivePivot => leverPivot != null ? leverPivot : transform;
+
+    private void Start()
     {
-        Debug.Log("[SpinLever] Инициализация...");
+        Debug.Log("[SpinLever] Initializing...");
 
-        leverRenderer = GetComponent<Renderer>();
-        if (leverRenderer != null)
+        cachedRenderer = GetComponent<Renderer>();
+        Renderer rendererToUse = ActiveRenderer;
+        if (rendererToUse != null)
         {
-            originalColor = leverRenderer.material.color;
-            Debug.Log("[SpinLever] Оригинальный цвет: " + originalColor);
+            originalColor = rendererToUse.material.color;
+            Debug.Log($"[SpinLever] Original color cached: {originalColor}");
         }
         else
         {
-            Debug.LogWarning("[SpinLever] Renderer не найден!");
+            Debug.LogWarning("[SpinLever] Renderer not found for hover feedback.");
         }
+
+        initialLocalRotation = ActivePivot.localRotation;
 
         if (ballManager == null)
         {
@@ -33,117 +54,172 @@ public class SpinLever : MonoBehaviour
 
         if (ballManager != null)
         {
-            Debug.Log("[SpinLever] BallManager найден! Шаров: " + ballManager.currentBalls);
+            Debug.Log($"[SpinLever] BallManager found. Balls available: {ballManager.currentBalls}");
         }
         else
         {
-            Debug.LogError("[SpinLever] BallManager НЕ найден!");
+            Debug.LogError("[SpinLever] BallManager not found.");
         }
 
-        Debug.Log("[SpinLever] Готов к работе!");
+        Debug.Log("[SpinLever] Ready.");
     }
 
-    void Update()
+    private void OnMouseDown()
     {
-        if (Input.GetMouseButtonDown(0) && isHovering)
-        {
-            OnLeverClick();
-        }
+        OnLeverClick();
     }
 
-    void OnMouseEnter()
+    private void OnMouseEnter()
     {
         isHovering = true;
-
-        if (!isSpinning && leverRenderer != null &&
-            GameManager.Instance != null &&
-            GameManager.Instance.state == BattleState.WaitingForPlayer &&
-            ballManager != null && ballManager.currentBalls > 0)
-        {
-            leverRenderer.material.color = Color.yellow;
-        }
+        RefreshVisualState();
     }
 
-    void OnMouseExit()
+    private void OnMouseExit()
     {
         isHovering = false;
-
-        if (leverRenderer != null && !isSpinning)
-        {
-            leverRenderer.material.color = originalColor;
-        }
+        RefreshVisualState();
     }
 
-    void OnLeverClick()
+    private void OnDisable()
     {
-        Debug.Log("[SpinLever] Клик по рычагу!");
+        if (leverAnimationRoutine != null)
+        {
+            StopCoroutine(leverAnimationRoutine);
+            leverAnimationRoutine = null;
+        }
+
+        ActivePivot.localRotation = initialLocalRotation;
+        isSpinning = false;
+        ApplyBaseColor();
+    }
+
+    private void OnLeverClick()
+    {
+        Debug.Log("[SpinLever] Lever click received.");
 
         if (isSpinning)
         {
-            Debug.Log("Уже крутится!");
+            Debug.Log("[SpinLever] Lever is already animating.");
             return;
         }
 
         if (GameManager.Instance == null)
         {
-            Debug.LogError("GameManager.Instance = null!");
+            Debug.LogError("[SpinLever] GameManager.Instance is null.");
             return;
         }
 
-        Debug.Log("[SpinLever] Состояние игры: " + GameManager.Instance.state);
+        Debug.Log($"[SpinLever] Current battle state: {GameManager.Instance.state}");
 
         if (GameManager.Instance.state != BattleState.WaitingForPlayer)
         {
-            Debug.Log("Нельзя крутить! Состояние: " + GameManager.Instance.state);
+            Debug.Log($"[SpinLever] Lever blocked. State: {GameManager.Instance.state}");
             return;
         }
 
         if (ballManager == null)
         {
-            Debug.LogError("ballManager = null!");
+            Debug.LogError("[SpinLever] ballManager is null.");
             return;
         }
 
-        Debug.Log("[SpinLever] Текущее количество шаров: " + ballManager.currentBalls);
+        Debug.Log($"[SpinLever] Balls available: {ballManager.currentBalls}");
 
         if (ballManager.currentBalls <= 0)
         {
-            Debug.Log("Нет шаров!");
+            Debug.Log("[SpinLever] No balls left.");
             return;
         }
 
-        Debug.Log("ЗАПУСК РЫЧАГА!");
         ActivateLever();
     }
 
-    void ActivateLever()
+    private void ActivateLever()
     {
-        Debug.Log("[SpinLever] Активация рычага...");
+        Debug.Log("[SpinLever] Activating lever...");
         isSpinning = true;
+        SetHighlight(true);
 
-        if (leverRenderer != null)
+        if (leverAnimationRoutine != null)
         {
-            leverRenderer.material.color = Color.yellow;
-            Debug.Log("[SpinLever] Цвет изменен на желтый");
+            StopCoroutine(leverAnimationRoutine);
         }
+
+        leverAnimationRoutine = StartCoroutine(AnimateLeverPress());
+    }
+
+    private IEnumerator AnimateLeverPress()
+    {
+        Transform pivot = ActivePivot;
+        Quaternion pressedRotation = initialLocalRotation * Quaternion.AngleAxis(pressAngle, pressAxis.normalized);
+
+        yield return RotateLever(pivot, initialLocalRotation, pressedRotation, pressDuration);
 
         if (ballManager != null)
         {
-            Debug.Log("[SpinLever] Вызов LaunchAllBalls()");
+            Debug.Log("[SpinLever] Launching balls.");
             ballManager.LaunchAllBalls();
         }
 
-        Invoke(nameof(ResetLever), 1f);
+        yield return RotateLever(pivot, pressedRotation, initialLocalRotation, releaseDuration);
+
+        ResetLever();
     }
 
-    void ResetLever()
+    private IEnumerator RotateLever(Transform pivot, Quaternion from, Quaternion to, float duration)
     {
-        Debug.Log("[SpinLever] Сброс рычага");
-        isSpinning = false;
-
-        if (leverRenderer != null)
+        if (duration <= 0f)
         {
-            leverRenderer.material.color = originalColor;
+            pivot.localRotation = to;
+            yield break;
         }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            pivot.localRotation = Quaternion.Slerp(from, to, t);
+            yield return null;
+        }
+
+        pivot.localRotation = to;
+    }
+
+    private void ResetLever()
+    {
+        Debug.Log("[SpinLever] Resetting lever.");
+        isSpinning = false;
+        leverAnimationRoutine = null;
+        ApplyBaseColor();
+    }
+
+    private void RefreshVisualState()
+    {
+        bool canHighlight = !isSpinning &&
+                            isHovering &&
+                            GameManager.Instance != null &&
+                            GameManager.Instance.state == BattleState.WaitingForPlayer &&
+                            ballManager != null &&
+                            ballManager.currentBalls > 0;
+
+        SetHighlight(canHighlight);
+    }
+
+    private void SetHighlight(bool highlighted)
+    {
+        Renderer rendererToUse = ActiveRenderer;
+        if (rendererToUse == null)
+        {
+            return;
+        }
+
+        rendererToUse.material.color = highlighted ? hoverColor : originalColor;
+    }
+
+    private void ApplyBaseColor()
+    {
+        RefreshVisualState();
     }
 }
