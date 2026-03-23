@@ -34,8 +34,7 @@ public class CoinVisual : MonoBehaviour
 
         Player player = FindObjectOfType<Player>();
         if (player == null) return;
-
-        int targetCoinCount = Mathf.Min(player.money, maxCoins);
+        int targetCoinCount = Mathf.Min(player.GetMoney(), maxCoins);
 
         if (targetCoinCount != lastCoinCount)
         {

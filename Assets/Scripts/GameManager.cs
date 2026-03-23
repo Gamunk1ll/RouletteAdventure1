@@ -197,7 +197,7 @@ public class GameManager : MonoBehaviour
         else
             EnemyDefend();
 
-        if (player.health <= 0)
+        if (player.GetHealth() <= 0)
         {
             GameOver();
             return;

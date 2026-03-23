@@ -91,7 +91,7 @@ public class Shop : MonoBehaviour
         if (player == null)
             return;
 
-        if (player.money < rerollPrice)
+        if (player.GetMoney() < rerollPrice)
         {
             SetHint($"Not enough money to reroll ({rerollPrice}$)");
             return;
@@ -111,7 +111,7 @@ public class Shop : MonoBehaviour
             return;
 
         int price = Mathf.Max(0, slot.assignedSector.buyPrice);
-        if (player.money < price)
+        if (player.GetMoney() < price)
         {
             SetHint($"Need {price}$");
             return;
@@ -157,7 +157,7 @@ public class Shop : MonoBehaviour
 
     private void UpdateButtonsState()
     {
-        int currentMoney = player != null ? player.money : 0;
+        int currentMoney = player != null ? player.GetMoney() : 0;
 
         for (int i = 0; i < slots.Length; i++)
         {
@@ -177,7 +177,7 @@ public class Shop : MonoBehaviour
         if (moneyText == null)
             return;
 
-        int value = player != null ? player.money : 0;
+        int value = player != null ? player.GetMoney() : 0;
         moneyText.text = $"${value}";
     }
 

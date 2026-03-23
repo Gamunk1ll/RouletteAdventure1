@@ -1,34 +1,59 @@
 using UnityEngine;
-using UnityEngine.UI; // Äëÿ Slider è Text
+using TMPro;
 
 public class Player : MonoBehaviour
 {
-    public int maxHealth = 60;
-    public int health = 60;
-    public int shield = 0;
-    public int money = 0;
-    public Slider playerShields;
-    public Slider playerHP;
-    public Text moneyText;
-    public float smoothSpeed = 5f;
+    [Header(" Stats")]
+    [SerializeField] private int maxHealth = 60;
+    [SerializeField] private int currentHealth = 60;
+    [SerializeField] private int maxShield = 30;
+    [SerializeField] private int currentShield = 0;
+    [SerializeField] private int money = 0;
 
-    private float currentHealthVisual;
-    private float currentShieldVisual;
+    public int Health => currentHealth;
+    public int MaxHealth => maxHealth;
+    public int Shield => currentShield;
+    public int MaxShield => maxShield;
+    public int Money => money;
+
+    public void SetMoney(int amount)
+    {
+        money = Mathf.Max(0, amount);
+        UpdateMoneyUI();
+    }
+
+    [Header(" 3D Bar References")]
+    [SerializeField] private Transform healthBar;
+    [SerializeField] private Transform shieldBar;
+    [SerializeField] private TextMeshPro healthText;
+    [SerializeField] private TextMeshPro shieldText;
+    [SerializeField] private TextMeshPro moneyText;
+
+    [Header(" Settings")]
+    [SerializeField] private float animationSpeed = 5f;
+
+    private float visualHealth;
+    private float visualShield;
+    private float healthBarMaxWidth;
+    private float shieldBarMaxWidth;
+    private Vector3 healthBarOriginalScale;
+    private Vector3 shieldBarOriginalScale;
 
     void Start()
     {
-        currentHealthVisual = health;
-        currentShieldVisual = shield;
-        if (playerHP != null)
+        visualHealth = currentHealth;
+        visualShield = currentShield;
+
+        if (healthBar != null)
         {
-            playerHP.maxValue = maxHealth;
-            playerHP.value = health;
+            healthBarOriginalScale = healthBar.localScale;
+            healthBarMaxWidth = Mathf.Abs(healthBarOriginalScale.x);
         }
 
-        if (playerShields != null)
+        if (shieldBar != null)
         {
-            playerShields.maxValue = maxHealth;
-            playerShields.value = shield;
+            shieldBarOriginalScale = shieldBar.localScale;
+            shieldBarMaxWidth = Mathf.Abs(shieldBarOriginalScale.x);
         }
 
         UpdateUI();
@@ -36,62 +61,129 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        currentHealthVisual = Mathf.Lerp(currentHealthVisual, health, Time.deltaTime * smoothSpeed);
-        if (playerHP != null)
+        visualHealth = Mathf.Lerp(visualHealth, currentHealth, Time.deltaTime * animationSpeed);
+        visualShield = Mathf.Lerp(visualShield, currentShield, Time.deltaTime * animationSpeed);
+
+        UpdateBars();
+        UpdateText();
+    }
+
+    void UpdateBars()
+    {
+        if (healthBar != null)
         {
-            playerHP.value = currentHealthVisual;
+            float healthPercent = Mathf.Clamp01(visualHealth / (float)maxHealth);
+            Vector3 newScale = healthBarOriginalScale;
+            newScale.x = -healthBarMaxWidth * healthPercent;
+            healthBar.localScale = Vector3.Lerp(healthBar.localScale, newScale, Time.deltaTime * animationSpeed * 2f);
         }
-        currentShieldVisual = Mathf.Lerp(currentShieldVisual, shield, Time.deltaTime * smoothSpeed);
-        if (playerShields != null)
+
+        if (shieldBar != null)
         {
-            playerShields.value = currentShieldVisual;
+            float shieldPercent = Mathf.Clamp01(visualShield / (float)maxShield);
+            Vector3 newScale = shieldBarOriginalScale;
+            newScale.x = -shieldBarMaxWidth * shieldPercent;
+            shieldBar.localScale = Vector3.Lerp(shieldBar.localScale, newScale, Time.deltaTime * animationSpeed * 2f);
         }
-        UpdateMoneyUI();
+    }
+
+    void UpdateText()
+    {
+        if (healthText != null)
+        {
+            healthText.text = $"{Mathf.FloorToInt(visualHealth)}/{maxHealth}";
+        }
+
+        if (shieldText != null)
+        {
+            shieldText.text = $"{Mathf.FloorToInt(visualShield)}/{maxShield}";
+        }
+
+        if (moneyText != null)
+        {
+            moneyText.text = money.ToString();
+        }
     }
 
     public void TakeDamage(int amount)
     {
-        int absorbed = Mathf.Min(shield, amount);
-        shield -= absorbed;
-        health -= (amount - absorbed);
-        health = Mathf.Max(0, health);
-        shield = Mathf.Max(0, shield);
+        int damage = amount;
+
+        if (currentShield > 0)
+        {
+            int shieldDamage = Mathf.Min(currentShield, damage);
+            currentShield -= shieldDamage;
+            damage -= shieldDamage;
+        }
+
+        if (damage > 0)
+        {
+            currentHealth -= damage;
+            currentHealth = Mathf.Max(0, currentHealth);
+        }
+
+        UpdateUI();
     }
 
     public void Heal(int amount)
     {
-        health = Mathf.Min(maxHealth, health + amount);
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        UpdateUI();
     }
 
     public void AddShield(int amount)
     {
-        shield += amount;
+        currentShield = Mathf.Min(maxShield, currentShield + amount);
+        UpdateUI();
     }
 
     public void AddMoney(int amount)
     {
         money += amount;
+        UpdateMoneyUI();
     }
 
     public void IncreaseMaxHealth(int amount, bool healFull = false)
     {
         maxHealth += amount;
-        if (playerHP != null)
+        if (healFull)
         {
-            playerHP.maxValue = maxHealth;
+            currentHealth = maxHealth;
         }
-        if (healFull) health = maxHealth;
+        UpdateUI();
     }
+
+    public void SetHealth(int value)
+    {
+        currentHealth = Mathf.Clamp(value, 0, maxHealth);
+        UpdateUI();
+    }
+
+    public void SetShield(int value)
+    {
+        currentShield = Mathf.Clamp(value, 0, maxShield);
+        UpdateUI();
+    }
+
+    public void UpdateUI()
+    {
+        visualHealth = currentHealth;
+        visualShield = currentShield;
+        UpdateBars();
+        UpdateText();
+    }
+
     void UpdateMoneyUI()
     {
         if (moneyText != null)
         {
-            moneyText.text = $"{money}";
+            moneyText.text = money.ToString();
         }
     }
 
-    void UpdateUI()
-    {
-        UpdateMoneyUI();
-    }
+    public int GetHealth() => currentHealth;
+    public int GetMaxHealth() => maxHealth;
+    public int GetShield() => currentShield;
+    public int GetMaxShield() => maxShield;
+    public int GetMoney() => money;
 }
