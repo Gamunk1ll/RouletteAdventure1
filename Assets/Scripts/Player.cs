@@ -23,16 +23,14 @@ public class Player : MonoBehaviour
     }
 
     [Header(" 3D Bar References")]
-    [SerializeField] private Transform healthBar;
-    [SerializeField] private Transform shieldBar;
+    [SerializeField] private Transform healthBar;      // HealthBar (родитель)
+    [SerializeField] private Transform shieldBar;      // ShieldsBar (родитель)
     [SerializeField] private TextMeshPro healthText;
     [SerializeField] private TextMeshPro shieldText;
     [SerializeField] private TextMeshPro moneyText;
 
     [Header(" Settings")]
     [SerializeField] private float animationSpeed = 5f;
-    [SerializeField] private bool healthBarAnchorLeft = true;
-    [SerializeField] private bool shieldBarAnchorLeft = true;
 
     private float visualHealth;
     private float visualShield;
@@ -52,14 +50,14 @@ public class Player : MonoBehaviour
         {
             healthBarOriginalScale = healthBar.localScale;
             healthBarMaxWidth = Mathf.Abs(healthBarOriginalScale.x);
-            healthBarOriginalPosition = healthBar.localPosition;
+            healthBarOriginalPosition = healthBar.position;
         }
 
         if (shieldBar != null)
         {
             shieldBarOriginalScale = shieldBar.localScale;
             shieldBarMaxWidth = Mathf.Abs(shieldBarOriginalScale.x);
-            shieldBarOriginalPosition = shieldBar.localPosition;
+            shieldBarOriginalPosition = shieldBar.position;
         }
 
         UpdateUI();
@@ -79,66 +77,38 @@ public class Player : MonoBehaviour
         if (healthBar != null)
         {
             float healthPercent = Mathf.Clamp01(visualHealth / (float)maxHealth);
-            UpdateBarTransform(
-                healthBar,
-                healthBarOriginalScale,
-                healthBarOriginalPosition,
-                healthBarMaxWidth,
-                healthPercent,
-                healthBarAnchorLeft
-            );
+            UpdateBarScale(healthBar, healthBarOriginalScale, healthBarOriginalPosition, healthBarMaxWidth, healthPercent);
         }
 
         if (shieldBar != null)
         {
             float shieldPercent = Mathf.Clamp01(visualShield / (float)maxShield);
-            UpdateBarTransform(
-                shieldBar,
-                shieldBarOriginalScale,
-                shieldBarOriginalPosition,
-                shieldBarMaxWidth,
-                shieldPercent,
-                shieldBarAnchorLeft
-            );
+            UpdateBarScale(shieldBar, shieldBarOriginalScale, shieldBarOriginalPosition, shieldBarMaxWidth, shieldPercent);
         }
     }
 
-    void UpdateBarTransform(
-        Transform bar,
-        Vector3 originalScale,
-        Vector3 originalPosition,
-        float maxWidth,
-        float percent,
-        bool anchorLeft
-    )
+    void UpdateBarScale(Transform bar, Vector3 originalScale, Vector3 originalPosition, float maxWidth, float percent)
     {
         float targetWidth = maxWidth * percent;
-        float widthDelta = maxWidth - targetWidth;
         float scaleSign = Mathf.Sign(originalScale.x);
 
         Vector3 targetScale = originalScale;
         targetScale.x = scaleSign * targetWidth;
 
-        Vector3 targetPosition = originalPosition;
-        targetPosition.x = anchorLeft
-            ? originalPosition.x + (widthDelta * 0.5f)
-            : originalPosition.x - (widthDelta * 0.5f);
-
-        float barLerpSpeed = Time.deltaTime * animationSpeed * 2f;
-        bar.localScale = Vector3.Lerp(bar.localScale, targetScale, barLerpSpeed);
-        bar.localPosition = Vector3.Lerp(bar.localPosition, targetPosition, barLerpSpeed);
+        float lerpSpeed = Time.deltaTime * animationSpeed * 2f;
+        bar.localScale = Vector3.Lerp(bar.localScale, targetScale, lerpSpeed);
     }
 
     void UpdateText()
     {
         if (healthText != null)
         {
-            healthText.text = $"{Mathf.FloorToInt(visualHealth)}/{maxHealth}";
+            healthText.text = $"{currentHealth}/{maxHealth}";
         }
 
         if (shieldText != null)
         {
-            shieldText.text = $"{Mathf.FloorToInt(visualShield)}/{maxShield}";
+            shieldText.text = $"{currentShield}/{maxShield}";
         }
 
         if (moneyText != null)
@@ -209,8 +179,6 @@ public class Player : MonoBehaviour
 
     public void UpdateUI()
     {
-        visualHealth = currentHealth;
-        visualShield = currentShield;
         UpdateBars();
         UpdateText();
     }
@@ -219,7 +187,7 @@ public class Player : MonoBehaviour
     {
         if (moneyText != null)
         {
-            moneyText.text = money.ToString();
+            moneyText.text = $"${money}";
         }
     }
 
