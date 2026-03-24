@@ -31,6 +31,8 @@ public class Player : MonoBehaviour
 
     [Header(" Settings")]
     [SerializeField] private float animationSpeed = 5f;
+    [SerializeField] private bool healthBarAnchorLeft = true;
+    [SerializeField] private bool shieldBarAnchorLeft = true;
 
     private float visualHealth;
     private float visualShield;
@@ -38,6 +40,8 @@ public class Player : MonoBehaviour
     private float shieldBarMaxWidth;
     private Vector3 healthBarOriginalScale;
     private Vector3 shieldBarOriginalScale;
+    private Vector3 healthBarOriginalPosition;
+    private Vector3 shieldBarOriginalPosition;
 
     void Start()
     {
@@ -48,12 +52,14 @@ public class Player : MonoBehaviour
         {
             healthBarOriginalScale = healthBar.localScale;
             healthBarMaxWidth = Mathf.Abs(healthBarOriginalScale.x);
+            healthBarOriginalPosition = healthBar.localPosition;
         }
 
         if (shieldBar != null)
         {
             shieldBarOriginalScale = shieldBar.localScale;
             shieldBarMaxWidth = Mathf.Abs(shieldBarOriginalScale.x);
+            shieldBarOriginalPosition = shieldBar.localPosition;
         }
 
         UpdateUI();
@@ -73,18 +79,54 @@ public class Player : MonoBehaviour
         if (healthBar != null)
         {
             float healthPercent = Mathf.Clamp01(visualHealth / (float)maxHealth);
-            Vector3 newScale = healthBarOriginalScale;
-            newScale.x = -healthBarMaxWidth * healthPercent;
-            healthBar.localScale = Vector3.Lerp(healthBar.localScale, newScale, Time.deltaTime * animationSpeed * 2f);
+            UpdateBarTransform(
+                healthBar,
+                healthBarOriginalScale,
+                healthBarOriginalPosition,
+                healthBarMaxWidth,
+                healthPercent,
+                healthBarAnchorLeft
+            );
         }
 
         if (shieldBar != null)
         {
             float shieldPercent = Mathf.Clamp01(visualShield / (float)maxShield);
-            Vector3 newScale = shieldBarOriginalScale;
-            newScale.x = -shieldBarMaxWidth * shieldPercent;
-            shieldBar.localScale = Vector3.Lerp(shieldBar.localScale, newScale, Time.deltaTime * animationSpeed * 2f);
+            UpdateBarTransform(
+                shieldBar,
+                shieldBarOriginalScale,
+                shieldBarOriginalPosition,
+                shieldBarMaxWidth,
+                shieldPercent,
+                shieldBarAnchorLeft
+            );
         }
+    }
+
+    void UpdateBarTransform(
+        Transform bar,
+        Vector3 originalScale,
+        Vector3 originalPosition,
+        float maxWidth,
+        float percent,
+        bool anchorLeft
+    )
+    {
+        float targetWidth = maxWidth * percent;
+        float widthDelta = maxWidth - targetWidth;
+        float scaleSign = Mathf.Sign(originalScale.x);
+
+        Vector3 targetScale = originalScale;
+        targetScale.x = scaleSign * targetWidth;
+
+        Vector3 targetPosition = originalPosition;
+        targetPosition.x = anchorLeft
+            ? originalPosition.x + (widthDelta * 0.5f)
+            : originalPosition.x - (widthDelta * 0.5f);
+
+        float barLerpSpeed = Time.deltaTime * animationSpeed * 2f;
+        bar.localScale = Vector3.Lerp(bar.localScale, targetScale, barLerpSpeed);
+        bar.localPosition = Vector3.Lerp(bar.localPosition, targetPosition, barLerpSpeed);
     }
 
     void UpdateText()
