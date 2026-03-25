@@ -23,15 +23,20 @@ public class Player : MonoBehaviour
     }
 
     [Header(" 3D Bar References")]
-    [SerializeField] private Transform healthBar;      // HealthBar (родитель)
-    [SerializeField] private Transform shieldBar;      // ShieldsBar (родитель)
-    [SerializeField] private TextMeshPro healthText;
-    [SerializeField] private TextMeshPro shieldText;
-    [SerializeField] private TextMeshPro moneyText;
+    private Vector3 healthBarOriginalLocalPosition;
+    private Vector3 shieldBarOriginalLocalPosition;
+            healthBarOriginalLocalPosition = healthBar.localPosition;
+            shieldBarOriginalLocalPosition = shieldBar.localPosition;
+            UpdateBarScale(healthBar, healthBarOriginalScale, healthBarOriginalLocalPosition, healthBarMaxWidth, healthPercent);
 
-    [Header(" Settings")]
-    [SerializeField] private float animationSpeed = 5f;
+            UpdateBarScale(shieldBar, shieldBarOriginalScale, shieldBarOriginalLocalPosition, shieldBarMaxWidth, shieldPercent);
+    void UpdateBarScale(Transform bar, Vector3 originalScale, Vector3 originalLocalPosition, float maxWidth, float percent)
 
+
+        Vector3 targetLocalPosition = originalLocalPosition;
+        float halfWidthDelta = (maxWidth - targetWidth) * 0.5f;
+        targetLocalPosition.x = originalLocalPosition.x - (halfWidthDelta * scaleSign);
+        bar.localPosition = Vector3.Lerp(bar.localPosition, targetLocalPosition, lerpSpeed);
     private float visualHealth;
     private float visualShield;
     private float healthBarMaxWidth;
