@@ -31,15 +31,13 @@ public class SpinLever : MonoBehaviour
     {
         ResolveReferences();
         initialLocalRotation = ActivePivot.localRotation;
-        InitGlow(); // Инициализация свечения
+        InitGlow();
     }
 
     private void Start()
     {
         ResolveReferences();
     }
-
-    // === НОВЫЕ МЕТОДЫ ДЛЯ СВЕЧЕНИЯ ===
     private void InitGlow()
     {
         objectRenderer = GetComponent<Renderer>();
@@ -48,20 +46,16 @@ public class SpinLever : MonoBehaviour
 
         propertyBlock = new MaterialPropertyBlock();
         emissionID = Shader.PropertyToID("_EmissionColor");
-
-        // Выключаем свечение по умолчанию
         SetGlow(false);
     }
 
     private void OnMouseEnter()
     {
-        // Включаем свечение при наведении
         SetGlow(true);
     }
 
     private void OnMouseExit()
     {
-        // Выключаем свечение при уходе мыши
         SetGlow(false);
     }
 
@@ -77,7 +71,6 @@ public class SpinLever : MonoBehaviour
         objectRenderer.SetPropertyBlock(propertyBlock);
     }
 
-    // Метод для вызова свечения из анимации (если нужно)
     public void TriggerGlowAnimation()
     {
         SetGlow(true);
@@ -87,7 +80,6 @@ public class SpinLever : MonoBehaviour
     {
         SetGlow(false);
     }
-    // =================================
 
     private void OnMouseDown()
     {
@@ -112,7 +104,7 @@ public class SpinLever : MonoBehaviour
         isSpinning = false;
         launchTriggered = false;
 
-        SetGlow(false); // Выключаем свечение при отключении
+        SetGlow(false);
     }
 
     private void ResolveReferences()

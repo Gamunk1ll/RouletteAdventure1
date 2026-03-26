@@ -3,12 +3,17 @@ using TMPro;
 
 public class Player : MonoBehaviour
 {
-    [Header(" Stats")]
     [SerializeField] private int maxHealth = 60;
     [SerializeField] private int currentHealth = 60;
     [SerializeField] private int maxShield = 30;
     [SerializeField] private int currentShield = 0;
     [SerializeField] private int money = 0;
+    [SerializeField] private float animationSpeed = 5f;
+    [SerializeField] private Transform healthBar;
+    [SerializeField] private Transform shieldBar;
+    [SerializeField] private TextMeshPro healthText;
+    [SerializeField] private TextMeshPro shieldText;
+    [SerializeField] private TextMeshPro moneyText;
 
     public int Health => currentHealth;
     public int MaxHealth => maxHealth;
@@ -16,29 +21,9 @@ public class Player : MonoBehaviour
     public int MaxShield => maxShield;
     public int Money => money;
 
-    public void SetMoney(int amount)
-    {
-        money = Mathf.Max(0, amount);
-        UpdateMoneyUI();
-    }
-
-    [Header(" 3D Bar References")]
-    private Vector3 healthBarOriginalLocalPosition;
-    private Vector3 shieldBarOriginalLocalPosition;
-            healthBarOriginalLocalPosition = healthBar.localPosition;
-            shieldBarOriginalLocalPosition = shieldBar.localPosition;
-            UpdateBarScale(healthBar, healthBarOriginalScale, healthBarOriginalLocalPosition, healthBarMaxWidth, healthPercent);
-
-            UpdateBarScale(shieldBar, shieldBarOriginalScale, shieldBarOriginalLocalPosition, shieldBarMaxWidth, shieldPercent);
-    void UpdateBarScale(Transform bar, Vector3 originalScale, Vector3 originalLocalPosition, float maxWidth, float percent)
-
-
-        Vector3 targetLocalPosition = originalLocalPosition;
-        float halfWidthDelta = (maxWidth - targetWidth) * 0.5f;
-        targetLocalPosition.x = originalLocalPosition.x - (halfWidthDelta * scaleSign);
-        bar.localPosition = Vector3.Lerp(bar.localPosition, targetLocalPosition, lerpSpeed);
     private float visualHealth;
     private float visualShield;
+
     private float healthBarMaxWidth;
     private float shieldBarMaxWidth;
     private Vector3 healthBarOriginalScale;
@@ -102,6 +87,12 @@ public class Player : MonoBehaviour
 
         float lerpSpeed = Time.deltaTime * animationSpeed * 2f;
         bar.localScale = Vector3.Lerp(bar.localScale, targetScale, lerpSpeed);
+
+        // Опционально: центрирование бара, если нужно
+        // Vector3 targetLocalPosition = originalPosition;
+        // float halfWidthDelta = (maxWidth - targetWidth) * 0.5f;
+        // targetLocalPosition.x = originalPosition.x - (halfWidthDelta * scaleSign);
+        // bar.position = Vector3.Lerp(bar.position, targetLocalPosition, lerpSpeed);
     }
 
     void UpdateText()
@@ -120,6 +111,12 @@ public class Player : MonoBehaviour
         {
             moneyText.text = money.ToString();
         }
+    }
+
+    public void SetMoney(int amount)
+    {
+        money = Mathf.Max(0, amount);
+        UpdateMoneyUI();
     }
 
     public void TakeDamage(int amount)
