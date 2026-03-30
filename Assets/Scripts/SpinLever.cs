@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -10,7 +11,6 @@ public class SpinLever : MonoBehaviour
     [SerializeField, Min(0f)] private float fallbackResetDelay = 0.8f;
     [SerializeField] private bool isSpinning;
 
-    // === ÍÎÂÛÅ ÏÎËß ÄËß ÑÂÅ×ÅÍÈß ===
     [Header("Glow Settings")]
     [SerializeField] private float glowIntensity = 3f;
     [SerializeField] private Color glowColor = Color.yellow;
@@ -18,12 +18,12 @@ public class SpinLever : MonoBehaviour
     private Renderer objectRenderer;
     private MaterialPropertyBlock propertyBlock;
     private int emissionID;
-    // =================================
 
     private Quaternion initialLocalRotation;
     private Coroutine fallbackLaunchRoutine;
     private Coroutine fallbackResetRoutine;
     private bool launchTriggered;
+    private Action pendingLeverAction;
 
     private Transform ActivePivot => leverPivot != null ? leverPivot : transform;
 
@@ -38,6 +38,7 @@ public class SpinLever : MonoBehaviour
     {
         ResolveReferences();
     }
+
     private void InitGlow()
     {
         objectRenderer = GetComponent<Renderer>();
@@ -49,15 +50,9 @@ public class SpinLever : MonoBehaviour
         SetGlow(false);
     }
 
-    private void OnMouseEnter()
-    {
-        SetGlow(true);
-    }
+    private void OnMouseEnter() => SetGlow(true);
 
-    private void OnMouseExit()
-    {
-        SetGlow(false);
-    }
+    private void OnMouseExit() => SetGlow(false);
 
     private void SetGlow(bool enable)
     {
@@ -71,15 +66,9 @@ public class SpinLever : MonoBehaviour
         objectRenderer.SetPropertyBlock(propertyBlock);
     }
 
-    public void TriggerGlowAnimation()
-    {
-        SetGlow(true);
-    }
+    public void TriggerGlowAnimation() => SetGlow(true);
 
-    public void StopGlowAnimation()
-    {
-        SetGlow(false);
-    }
+    public void StopGlowAnimation() => SetGlow(false);
 
     private void OnMouseDown()
     {
@@ -103,6 +92,7 @@ public class SpinLever : MonoBehaviour
         ActivePivot.localRotation = initialLocalRotation;
         isSpinning = false;
         launchTriggered = false;
+        pendingLeverAction = null;
 
         SetGlow(false);
     }
@@ -124,16 +114,20 @@ public class SpinLever : MonoBehaviour
 
     private void OnLeverClick()
     {
-        if (isSpinning)
+        if (isSpinning || GameManager.Instance == null)
             return;
 
-        if (GameManager.Instance == null || GameManager.Instance.state != BattleState.WaitingForPlayer)
+        if (GameManager.Instance.state == BattleState.Shop)
+        {
+            ActivateLever(() => GameManager.Instance.CloseShop());
+            return;
+        }
+
+        if (GameManager.Instance.state != BattleState.WaitingForPlayer)
             return;
 
         if (ballManager == null)
-        {
             return;
-        }
 
         if (ballManager.currentBalls <= 0)
             return;
@@ -141,10 +135,11 @@ public class SpinLever : MonoBehaviour
         ActivateLever();
     }
 
-    private void ActivateLever()
+    private void ActivateLever(Action leverAction = null)
     {
         isSpinning = true;
         launchTriggered = false;
+        pendingLeverAction = leverAction;
 
         if (fallbackLaunchRoutine != null)
             StopCoroutine(fallbackLaunchRoutine);
@@ -200,6 +195,7 @@ public class SpinLever : MonoBehaviour
 
         isSpinning = false;
         launchTriggered = false;
+        pendingLeverAction = null;
     }
 
     public void OnLeverPressed()
@@ -208,6 +204,13 @@ public class SpinLever : MonoBehaviour
             return;
 
         launchTriggered = true;
+
+        if (pendingLeverAction != null)
+        {
+            pendingLeverAction.Invoke();
+            pendingLeverAction = null;
+            return;
+        }
 
         if (ballManager != null)
             ballManager.LaunchAllBalls();
