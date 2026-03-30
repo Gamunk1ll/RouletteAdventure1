@@ -1,22 +1,30 @@
+using System.Reflection;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-public class Menu : MonoBehaviour
+public class MenuBlurController : MonoBehaviour
 {
+    [Header("UI Elements")]
     public GameObject menuPanel;
 
-    public Volume postProcessVolume;
+    [Header("Blur Settings")]
+    [Tooltip("Assign your Volume component (URP/HDRP) here. Kept as Component to avoid hard dependency on render pipeline assemblies.")]
+    public Component postProcessVolume;
     public float blurAmount = 1f;
 
-    private bool isMenuOpen = false;
+    private PropertyInfo _volumeWeightProperty;
+    private bool isMenuOpen;
 
-    void Start()
+    private void Start()
     {
+        CacheVolumeWeightProperty();
+
         if (menuPanel != null)
+        {
             menuPanel.SetActive(false);
+        }
     }
 
-    void Update()
+    private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -29,31 +37,36 @@ public class Menu : MonoBehaviour
         isMenuOpen = !isMenuOpen;
 
         if (isMenuOpen)
+        {
             OpenMenu();
-        else
-            CloseMenu();
+            return;
+        }
+
+        CloseMenu();
     }
 
-    void OpenMenu()
+    private void OpenMenu()
     {
         if (menuPanel != null)
+        {
             menuPanel.SetActive(true);
+        }
 
-        if (postProcessVolume != null)
-            postProcessVolume.weight = blurAmount;
+        SetVolumeWeight(blurAmount);
 
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
-    void CloseMenu()
+    private void CloseMenu()
     {
         if (menuPanel != null)
+        {
             menuPanel.SetActive(false);
+        }
 
-        if (postProcessVolume != null)
-            postProcessVolume.weight = 0f;
+        SetVolumeWeight(0f);
 
         Time.timeScale = 1f;
         Cursor.lockState = CursorLockMode.Locked;
@@ -72,5 +85,40 @@ public class Menu : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
+    }
+
+    private void CacheVolumeWeightProperty()
+    {
+        if (postProcessVolume == null)
+        {
+            return;
+        }
+
+        _volumeWeightProperty = postProcessVolume.GetType().GetProperty("weight", BindingFlags.Public | BindingFlags.Instance);
+
+        if (_volumeWeightProperty == null || _volumeWeightProperty.PropertyType != typeof(float))
+        {
+            Debug.LogWarning($"'{postProcessVolume.GetType().Name}' does not expose a float 'weight' property.", this);
+            _volumeWeightProperty = null;
+        }
+    }
+
+    private void SetVolumeWeight(float value)
+    {
+        if (postProcessVolume == null)
+        {
+            return;
+        }
+
+        if (_volumeWeightProperty == null)
+        {
+            CacheVolumeWeightProperty();
+            if (_volumeWeightProperty == null)
+            {
+                return;
+            }
+        }
+
+        _volumeWeightProperty.SetValue(postProcessVolume, value);
     }
 }
