@@ -11,6 +11,7 @@ public class RouletteInitializer : MonoBehaviour
     public int referenceStartSlot = 0;
     public int referenceSectorSize = 2;
     public bool rotateClockwise = true;
+    public bool useSlotBasedRotation = true;
     public float sectorScaleMultiplier = 1f;
     public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
@@ -116,7 +117,8 @@ public class RouletteInitializer : MonoBehaviour
         Quaternion computedSectorRotation = CalculateSectorLocalRotation(
             startSlot,
             size,
-            prefabSector
+            prefabSector,
+            parent
         );
 
         sectorObj.transform.localRotation = computedSectorRotation;
@@ -185,11 +187,41 @@ public class RouletteInitializer : MonoBehaviour
         return accumulated / count;
     }
 
-    private Quaternion CalculateSectorLocalRotation(int startSlot, int size, BaseSector prefabSector)
+    private Quaternion CalculateSectorLocalRotation(int startSlot, int size, BaseSector prefabSector, Transform parent)
     {
         if (allSlots == null || allSlots.Count == 0)
         {
             return prefabSector != null ? prefabSector.transform.localRotation : Quaternion.identity;
+        }
+
+        if (useSlotBasedRotation)
+        {
+            float slotCenterIndex = startSlot + (size - 1) * 0.5f;
+            int leftIndex = Mathf.Clamp(Mathf.FloorToInt(slotCenterIndex), 0, allSlots.Count - 1);
+            int rightIndex = Mathf.Clamp(Mathf.CeilToInt(slotCenterIndex), 0, allSlots.Count - 1);
+
+            Slot leftSlot = allSlots[leftIndex];
+            Slot rightSlot = allSlots[rightIndex];
+
+            if (leftSlot != null || rightSlot != null)
+            {
+                float slotVisualOffsetZ = prefabSector != null ? prefabSector.visualRotationOffsetZ : 0f;
+                Vector3 slotPrefabEuler = prefabSector != null
+                    ? prefabSector.transform.localEulerAngles
+                    : Vector3.zero;
+
+                Quaternion leftRotation = leftSlot != null ? leftSlot.transform.rotation : rightSlot.transform.rotation;
+                Quaternion rightRotation = rightSlot != null ? rightSlot.transform.rotation : leftRotation;
+                float blend = Mathf.Clamp01(slotCenterIndex - leftIndex);
+
+                Quaternion worldRotation = Quaternion.Slerp(leftRotation, rightRotation, blend) * Quaternion.Euler(0f, 0f, slotVisualOffsetZ);
+                Quaternion localRotation = parent != null
+                    ? Quaternion.Inverse(parent.rotation) * worldRotation
+                    : worldRotation;
+
+                Vector3 localEuler = localRotation.eulerAngles;
+                return Quaternion.Euler(slotPrefabEuler.x, slotPrefabEuler.y, localEuler.z + sectorRotationOffset);
+            }
         }
 
         float anglePerSlot = 360f / allSlots.Count;
