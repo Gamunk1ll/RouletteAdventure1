@@ -44,14 +44,14 @@ public class SectorSelector : MonoBehaviour
         if (rouletteEditorPanel != null)
             rouletteEditorPanel.SetActive(isEditMode);
 
-        Debug.Log($"Режим редактирования: {isEditMode}");
+        Debug.Log($" : {isEditMode}");
     }
     public void SelectFromInventory(int index)
     {
         if (!isEditMode) return;
 
         selectedInventoryIndex = index;
-        Debug.Log($"Выбран сектор из инвентаря: {index}");
+        Debug.Log($"   : {index}");
         if (selectedSlotIndex >= 0)
         {
             ReplaceSector();
@@ -62,7 +62,7 @@ public class SectorSelector : MonoBehaviour
         if (!isEditMode) return;
 
         selectedSlotIndex = slotIndex;
-        Debug.Log($"Выбран слот рулетки: {slotIndex}");
+        Debug.Log($"  : {slotIndex}");
         if (selectedInventoryIndex >= 0)
         {
             ReplaceSector();
@@ -86,13 +86,13 @@ public class SectorSelector : MonoBehaviour
 
         if (oldSector != null && oldSector.data != null)
         {
-            inventory.AddSector(oldSector.data);
+            inventory.AddSector(oldSector.data, oldSector.data.buyPrice);
         }
         sectorPlacement.PlaceSectorsDefault();
         selectedInventoryIndex = -1;
         selectedSlotIndex = -1;
 
-        Debug.Log("Сектор заменен!");
+        Debug.Log(" !");
     }
     public void SellSelectedSector()
     {
@@ -105,13 +105,13 @@ public class SectorSelector : MonoBehaviour
 
     void ConfirmChanges()
     {
-        Debug.Log("Изменения подтверждены");
+        Debug.Log(" ");
         ToggleEditMode();
     }
 
     void CancelChanges()
     {
-        Debug.Log("Изменения отменены");
+        Debug.Log(" ");
         selectedInventoryIndex = -1;
         selectedSlotIndex = -1;
         ToggleEditMode();

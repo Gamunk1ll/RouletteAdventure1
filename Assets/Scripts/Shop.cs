@@ -34,6 +34,10 @@ public class Shop : MonoBehaviour
     public TMP_Text hintText;
     public Button rerollButton;
     public int rerollPrice = 10;
+    [Min(0)] public int rerollPriceGrowthPerWave = 2;
+    [Min(0)] public int rerollPriceGrowthPerRoll = 3;
+    [Min(0f)] public float wavePriceGrowth = 0.12f;
+    [Min(0)] public int ballPurchaseAmount = 1;
 
     [Header("Legacy UI (optional)")]
     public Text legacyMoneyText;
@@ -45,6 +49,7 @@ public class Shop : MonoBehaviour
 
     private readonly List<GameObject> spawnedWorldItems = new();
     private Player player;
+    private int rerollsThisShopStage;
 
     private void Awake()
     {
@@ -82,6 +87,7 @@ public class Shop : MonoBehaviour
         if (player == null)
             player = GameManager.Instance != null ? GameManager.Instance.player : FindObjectOfType<Player>();
 
+        rerollsThisShopStage = 0;
         RollItems();
         gameObject.SetActive(true);
     }
@@ -99,7 +105,8 @@ public class Shop : MonoBehaviour
 
         int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
 
-        if (uniqueOffers)
+        bool useUniqueOffers = uniqueOffers || possibleItems.Length >= activeOffers;
+        if (useUniqueOffers)
         {
             List<SectorData> pool = new List<SectorData>(possibleItems);
             Shuffle(pool);
@@ -131,13 +138,15 @@ public class Shop : MonoBehaviour
         if (player == null)
             return;
 
-        if (player.GetMoney() < rerollPrice)
+        int currentRerollPrice = GetCurrentRerollPrice();
+        if (player.GetMoney() < currentRerollPrice)
         {
-            SetHint($"Not enough money to reroll ({rerollPrice}$)");
+            SetHint($"Not enough money to reroll ({currentRerollPrice}$)");
             return;
         }
 
-        player.AddMoney(-rerollPrice);
+        player.AddMoney(-currentRerollPrice);
+        rerollsThisShopStage++;
         RollItems();
     }
 
@@ -150,7 +159,7 @@ public class Shop : MonoBehaviour
         if (slot.assignedSector == null || player == null)
             return;
 
-        int price = Mathf.Max(0, slot.assignedSector.buyPrice);
+        int price = GetBuyPrice(slot.assignedSector);
         if (player.GetMoney() < price)
         {
             SetHint($"Need {price}$");
@@ -164,10 +173,24 @@ public class Shop : MonoBehaviour
             return;
         }
 
-        bool added = inventory.AddSector(slot.assignedSector);
+        bool added;
+        if (slot.assignedSector.shopItemKind == ShopItemKind.Ball)
+        {
+            added = inventory.AddBall(slot.assignedSector);
+            BallManager ballManager = FindObjectOfType<BallManager>();
+            if (added && ballManager != null)
+                ballManager.AddBalls(Mathf.Max(1, ballPurchaseAmount));
+        }
+        else
+        {
+            added = inventory.AddSector(slot.assignedSector, price);
+        }
+
         if (!added)
         {
-            SetHint("Inventory is full");
+            SetHint(slot.assignedSector.shopItemKind == ShopItemKind.Ball
+                ? "Failed to add ball"
+                : "Inventory is full. Sell sector/turret first");
             return;
         }
 
@@ -192,7 +215,7 @@ public class Shop : MonoBehaviour
         }
 
         SetLabel(slot.titleText, slot.legacyTitleText, item.name);
-        SetLabel(slot.priceText, slot.legacyPriceText, $"${Mathf.Max(0, item.buyPrice)}");
+        SetLabel(slot.priceText, slot.legacyPriceText, $"${GetBuyPrice(item)}");
         if (slot.iconImage != null) slot.iconImage.sprite = item.icon;
     }
 
@@ -230,7 +253,7 @@ public class Shop : MonoBehaviour
             if (offer == null)
                 offer = itemView.AddComponent<ShopWorldOffer>();
 
-            offer.Setup(this, i, slots[i].assignedSector);
+            offer.Setup(this, i, slots[i].assignedSector, GetBuyPrice(slots[i].assignedSector));
             spawnedWorldItems[i] = itemView;
         }
     }
@@ -260,6 +283,7 @@ public class Shop : MonoBehaviour
     private void UpdateButtonsState()
     {
         int currentMoney = player != null ? player.GetMoney() : 0;
+        PlayerInventory inventory = PlayerInventory.Instance;
 
         int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
         for (int i = 0; i < slots.Length; i++)
@@ -267,15 +291,24 @@ public class Shop : MonoBehaviour
             if (slots[i].buyButton == null)
                 continue;
 
-            bool canBuy = i < activeOffers &&
-                          slots[i].assignedSector != null &&
-                          currentMoney >= Mathf.Max(0, slots[i].assignedSector.buyPrice);
+            bool hasItem = i < activeOffers && slots[i].assignedSector != null;
+            bool enoughMoney = hasItem && currentMoney >= GetBuyPrice(slots[i].assignedSector);
+            bool hasSlotSpace = true;
+
+            if (hasItem &&
+                slots[i].assignedSector.shopItemKind != ShopItemKind.Ball &&
+                inventory != null)
+            {
+                hasSlotSpace = inventory.inventory.Count < inventory.MaxInventorySize;
+            }
+
+            bool canBuy = hasItem && enoughMoney && hasSlotSpace;
 
             slots[i].buyButton.interactable = canBuy;
         }
 
         if (rerollButton != null)
-            rerollButton.interactable = player != null && currentMoney >= rerollPrice;
+            rerollButton.interactable = player != null && currentMoney >= GetCurrentRerollPrice();
     }
 
     private void UpdateMoneyText()
@@ -290,6 +323,28 @@ public class Shop : MonoBehaviour
     {
         SetLabel(hintText, legacyHintText, text);
         Debug.Log($"[Shop] {text}");
+    }
+
+    private int GetBuyPrice(SectorData item)
+    {
+        if (item == null)
+            return 0;
+
+        int wave = 1;
+        if (GameManager.Instance != null)
+            wave = Mathf.Max(1, GameManager.Instance.currentWave);
+
+        float multiplier = 1f + (wave - 1) * wavePriceGrowth;
+        return Mathf.Max(0, Mathf.RoundToInt(item.buyPrice * multiplier));
+    }
+
+    private int GetCurrentRerollPrice()
+    {
+        int wave = 1;
+        if (GameManager.Instance != null)
+            wave = Mathf.Max(1, GameManager.Instance.currentWave);
+
+        return rerollPrice + (wave - 1) * rerollPriceGrowthPerWave + rerollsThisShopStage * rerollPriceGrowthPerRoll;
     }
 
     private static void SetLabel(TMP_Text tmpText, Text legacyText, string value)
