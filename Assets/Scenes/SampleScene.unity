@@ -1016,7 +1016,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &484182475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2590,6 +2590,8 @@ MonoBehaviour:
   stageController: {fileID: 0}
   currentWave: 1
   totalWaves: 15
+  waveClearRewardBase: 8
+  waveClearRewardPerWave: 2
   shopOpenDelay: 0.8
   shopCloseDelay: 0.8
 --- !u!114 &1458700648
@@ -2790,7 +2792,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -257.51584, y: -1.3863068}
+  m_AnchoredPosition: {x: -257.51587, y: -1.3862915}
   m_SizeDelta: {x: -501.6747, y: 16.555}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1592611198
