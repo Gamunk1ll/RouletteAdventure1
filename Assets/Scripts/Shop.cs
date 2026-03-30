@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,6 +26,11 @@ public class Shop : MonoBehaviour
     public Button rerollButton;
     public int rerollPrice = 10;
 
+    [Header("3D Shop Offers")]
+    public Transform[] worldSpawnPoints;
+    public Transform worldItemsParent;
+
+    private readonly List<GameObject> spawnedWorldItems = new();
     private Player player;
 
     private void Awake()
@@ -69,6 +75,7 @@ public class Shop : MonoBehaviour
 
     public void Close()
     {
+        ClearWorldItems();
         gameObject.SetActive(false);
     }
 
@@ -83,6 +90,7 @@ public class Shop : MonoBehaviour
             BindItemToSlot(slots[i], item);
         }
 
+        RespawnWorldItems();
         UpdateButtonsState();
     }
 
@@ -101,7 +109,7 @@ public class Shop : MonoBehaviour
         RollItems();
     }
 
-    private void TryBuy(int slotIndex)
+    public void TryBuy(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= slots.Length)
             return;
@@ -135,6 +143,7 @@ public class Shop : MonoBehaviour
         SetHint($"Bought: {slot.assignedSector.name}");
 
         BindItemToSlot(slot, null);
+        ClearWorldItem(slotIndex);
         UpdateButtonsState();
     }
 
@@ -153,6 +162,65 @@ public class Shop : MonoBehaviour
         if (slot.titleText != null) slot.titleText.text = item.name;
         if (slot.priceText != null) slot.priceText.text = $"${Mathf.Max(0, item.buyPrice)}";
         if (slot.iconImage != null) slot.iconImage.sprite = item.icon;
+    }
+
+    private void RespawnWorldItems()
+    {
+        ClearWorldItems();
+
+        if (worldSpawnPoints == null || worldSpawnPoints.Length == 0)
+            return;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            spawnedWorldItems.Add(null);
+
+            if (i >= worldSpawnPoints.Length)
+                continue;
+
+            Transform spawnPoint = worldSpawnPoints[i];
+            if (spawnPoint == null || slots[i].assignedSector == null)
+                continue;
+
+            GameObject visualPrefab = slots[i].assignedSector.visualPrefab;
+            if (visualPrefab == null)
+                continue;
+
+            Transform parent = worldItemsParent != null ? worldItemsParent : spawnPoint;
+            GameObject itemView = Instantiate(visualPrefab, spawnPoint.position, spawnPoint.rotation, parent);
+
+            if (itemView.GetComponent<Collider>() == null)
+                itemView.AddComponent<BoxCollider>();
+
+            ShopWorldOffer offer = itemView.GetComponent<ShopWorldOffer>();
+            if (offer == null)
+                offer = itemView.AddComponent<ShopWorldOffer>();
+
+            offer.Setup(this, i);
+            spawnedWorldItems[i] = itemView;
+        }
+    }
+
+    private void ClearWorldItems()
+    {
+        for (int i = 0; i < spawnedWorldItems.Count; i++)
+        {
+            if (spawnedWorldItems[i] != null)
+                Destroy(spawnedWorldItems[i]);
+        }
+
+        spawnedWorldItems.Clear();
+    }
+
+    private void ClearWorldItem(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= spawnedWorldItems.Count)
+            return;
+
+        if (spawnedWorldItems[slotIndex] != null)
+            Destroy(spawnedWorldItems[slotIndex]);
+
+        spawnedWorldItems[slotIndex] = null;
     }
 
     private void UpdateButtonsState()
