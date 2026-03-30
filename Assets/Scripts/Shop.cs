@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,9 +10,13 @@ public class Shop : MonoBehaviour
     public class ShopSlot
     {
         public Button buyButton;
-        public Text titleText;
-        public Text priceText;
+        public TMP_Text titleText;
+        public TMP_Text priceText;
         public Image iconImage;
+
+        [Header("Legacy UI (optional)")]
+        public Text legacyTitleText;
+        public Text legacyPriceText;
 
         [HideInInspector] public SectorData assignedSector;
     }
@@ -20,11 +25,19 @@ public class Shop : MonoBehaviour
     public SectorData[] possibleItems;
     public ShopSlot[] slots;
 
+    [Header("Generation")]
+    [Min(1)] public int offersPerRoll = 6;
+    public bool uniqueOffers = false;
+
     [Header("UI")]
-    public Text moneyText;
-    public Text hintText;
+    public TMP_Text moneyText;
+    public TMP_Text hintText;
     public Button rerollButton;
     public int rerollPrice = 10;
+
+    [Header("Legacy UI (optional)")]
+    public Text legacyMoneyText;
+    public Text legacyHintText;
 
     [Header("3D Shop Offers")]
     public Transform[] worldSpawnPoints;
@@ -84,11 +97,30 @@ public class Shop : MonoBehaviour
         if (possibleItems == null || possibleItems.Length == 0)
             return;
 
-        for (int i = 0; i < slots.Length; i++)
+        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
+
+        if (uniqueOffers)
         {
-            SectorData item = possibleItems[UnityEngine.Random.Range(0, possibleItems.Length)];
-            BindItemToSlot(slots[i], item);
+            List<SectorData> pool = new List<SectorData>(possibleItems);
+            Shuffle(pool);
+
+            for (int i = 0; i < activeOffers; i++)
+            {
+                SectorData item = pool[i % pool.Count];
+                BindItemToSlot(slots[i], item);
+            }
         }
+        else
+        {
+            for (int i = 0; i < activeOffers; i++)
+            {
+                SectorData item = possibleItems[UnityEngine.Random.Range(0, possibleItems.Length)];
+                BindItemToSlot(slots[i], item);
+            }
+        }
+
+        for (int i = activeOffers; i < slots.Length; i++)
+            BindItemToSlot(slots[i], null);
 
         RespawnWorldItems();
         UpdateButtonsState();
@@ -153,14 +185,14 @@ public class Shop : MonoBehaviour
 
         if (item == null)
         {
-            if (slot.titleText != null) slot.titleText.text = "SOLD";
-            if (slot.priceText != null) slot.priceText.text = "-";
+            SetLabel(slot.titleText, slot.legacyTitleText, "SOLD");
+            SetLabel(slot.priceText, slot.legacyPriceText, "-");
             if (slot.iconImage != null) slot.iconImage.sprite = null;
             return;
         }
 
-        if (slot.titleText != null) slot.titleText.text = item.name;
-        if (slot.priceText != null) slot.priceText.text = $"${Mathf.Max(0, item.buyPrice)}";
+        SetLabel(slot.titleText, slot.legacyTitleText, item.name);
+        SetLabel(slot.priceText, slot.legacyPriceText, $"${Mathf.Max(0, item.buyPrice)}");
         if (slot.iconImage != null) slot.iconImage.sprite = item.icon;
     }
 
@@ -171,7 +203,9 @@ public class Shop : MonoBehaviour
         if (worldSpawnPoints == null || worldSpawnPoints.Length == 0)
             return;
 
-        for (int i = 0; i < slots.Length; i++)
+        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
+
+        for (int i = 0; i < activeOffers; i++)
         {
             spawnedWorldItems.Add(null);
 
@@ -196,7 +230,7 @@ public class Shop : MonoBehaviour
             if (offer == null)
                 offer = itemView.AddComponent<ShopWorldOffer>();
 
-            offer.Setup(this, i);
+            offer.Setup(this, i, slots[i].assignedSector);
             spawnedWorldItems[i] = itemView;
         }
     }
@@ -227,12 +261,16 @@ public class Shop : MonoBehaviour
     {
         int currentMoney = player != null ? player.GetMoney() : 0;
 
+        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
         for (int i = 0; i < slots.Length; i++)
         {
             if (slots[i].buyButton == null)
                 continue;
 
-            bool canBuy = slots[i].assignedSector != null && currentMoney >= Mathf.Max(0, slots[i].assignedSector.buyPrice);
+            bool canBuy = i < activeOffers &&
+                          slots[i].assignedSector != null &&
+                          currentMoney >= Mathf.Max(0, slots[i].assignedSector.buyPrice);
+
             slots[i].buyButton.interactable = canBuy;
         }
 
@@ -242,18 +280,33 @@ public class Shop : MonoBehaviour
 
     private void UpdateMoneyText()
     {
-        if (moneyText == null)
-            return;
-
         int value = player != null ? player.GetMoney() : 0;
-        moneyText.text = $"${value}";
+        string text = $"${value}";
+
+        SetLabel(moneyText, legacyMoneyText, text);
     }
 
     private void SetHint(string text)
     {
-        if (hintText != null)
-            hintText.text = text;
-
+        SetLabel(hintText, legacyHintText, text);
         Debug.Log($"[Shop] {text}");
+    }
+
+    private static void SetLabel(TMP_Text tmpText, Text legacyText, string value)
+    {
+        if (tmpText != null)
+            tmpText.text = value;
+
+        if (legacyText != null)
+            legacyText.text = value;
+    }
+
+    private static void Shuffle<T>(List<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 }
