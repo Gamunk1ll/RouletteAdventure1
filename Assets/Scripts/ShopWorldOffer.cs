@@ -14,11 +14,13 @@ public class ShopWorldOffer : MonoBehaviour
 
     private Shop shop;
     private int slotIndex;
+    private int displayedPrice;
 
-    public void Setup(Shop owner, int index, SectorData sector)
+    public void Setup(Shop owner, int index, SectorData sector, int price)
     {
         shop = owner;
         slotIndex = index;
+        displayedPrice = Mathf.Max(0, price);
         ApplyLabels(sector);
     }
 
@@ -42,7 +44,7 @@ public class ShopWorldOffer : MonoBehaviour
             TryAutoAssignTmpLabels();
 
         string title = sector.name;
-        string price = $"${Mathf.Max(0, sector.buyPrice)}";
+        string price = $"${displayedPrice}";
 
         if (titleText != null)
             titleText.text = title;

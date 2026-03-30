@@ -30,6 +30,8 @@ public class GameManager : MonoBehaviour
     [Header("Progression")]
     public int currentWave = 1;
     public int totalWaves = 15;
+    public int waveClearRewardBase = 8;
+    public int waveClearRewardPerWave = 2;
 
     [Header("Shop Transition")]
     public float shopOpenDelay = 0.8f;
@@ -37,6 +39,7 @@ public class GameManager : MonoBehaviour
 
     private int pendingBalls = 0;
     private int defeatedEnemies = 0;
+    private bool waveRewardGranted;
 
     private void Awake()
     {
@@ -244,6 +247,8 @@ public class GameManager : MonoBehaviour
     {
         state = BattleState.Shop;
 
+        GrantWaveClearRewardOnce();
+
         if (battleUI != null)
             battleUI.SetActive(false);
 
@@ -316,6 +321,8 @@ public class GameManager : MonoBehaviour
         if (enemies == null || enemies.Length == 0)
             return;
 
+        waveRewardGranted = false;
+
         int enemiesCount = Mathf.Min(waveNumber, enemies.Length);
 
         for (int i = 0; i < enemies.Length; i++)
@@ -339,5 +346,17 @@ public class GameManager : MonoBehaviour
         BallManager ballManager = FindObjectOfType<BallManager>();
         if (ballManager != null)
             ballManager.AddBalls(count);
+    }
+
+    private void GrantWaveClearRewardOnce()
+    {
+        if (waveRewardGranted || player == null)
+            return;
+
+        int reward = Mathf.Max(0, waveClearRewardBase + (currentWave - 1) * waveClearRewardPerWave);
+        if (reward > 0)
+            player.AddMoney(reward);
+
+        waveRewardGranted = true;
     }
 }
