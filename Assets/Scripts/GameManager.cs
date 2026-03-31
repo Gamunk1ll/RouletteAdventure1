@@ -32,6 +32,11 @@ public class GameManager : MonoBehaviour
     public int totalWaves = 15;
     public int waveClearRewardBase = 8;
     public int waveClearRewardPerWave = 2;
+    public int enemyHealthGrowthPerWave = 12;
+    public int enemyAttackBase = 8;
+    public int enemyAttackGrowthPerWave = 2;
+    public int enemyShieldBase = 5;
+    public int enemyShieldGrowthPerWave = 1;
 
     [Header("Shop Transition")]
     public float shopOpenDelay = 0.8f;
@@ -211,7 +216,7 @@ public class GameManager : MonoBehaviour
 
     private void EnemyAttack()
     {
-        int damage = 8;
+        int damage = Mathf.Max(0, enemyAttackBase + (currentWave - 1) * enemyAttackGrowthPerWave);
         player.TakeDamage(damage);
     }
 
@@ -221,7 +226,7 @@ public class GameManager : MonoBehaviour
         if (target == null)
             return;
 
-        int shield = 5;
+        int shield = Mathf.Max(0, enemyShieldBase + (currentWave - 1) * enemyShieldGrowthPerWave);
         target.AddShield(shield);
     }
 
@@ -336,8 +341,7 @@ public class GameManager : MonoBehaviour
             if (!shouldBeActive)
                 continue;
 
-            enemies[i].health = enemies[i].maxHealth;
-            enemies[i].shield = 0;
+            enemies[i].ResetForWave(waveNumber, enemyHealthGrowthPerWave);
         }
     }
 
