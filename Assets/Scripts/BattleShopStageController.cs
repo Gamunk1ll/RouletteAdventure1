@@ -3,16 +3,12 @@ using UnityEngine;
 
 public class BattleShopStageController : MonoBehaviour
 {
-    [Header("Flip Target")]
     public Transform stageTransform;
     public Vector3 battleEuler = Vector3.zero;
     public Vector3 shopEuler = new Vector3(0f, 180f, 0f);
 
-    [Header("Timings")]
     public float flipDuration = 0.65f;
     public AnimationCurve flipCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-
-    [Header("Panels")]
     public GameObject battleSideObjects;
     public GameObject shopSideObjects;
 

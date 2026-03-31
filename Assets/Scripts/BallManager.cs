@@ -21,7 +21,6 @@ public class BallManager : MonoBehaviour
 
         if (roulette == null)
         {
-            Debug.LogError("BallManager: RouletteManager reference is missing.");
             return;
         }
 

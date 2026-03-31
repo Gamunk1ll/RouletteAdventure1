@@ -19,5 +19,5 @@ MonoBehaviour:
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 296590998406707892, guid: 039faff2083659a4aa99c470e5d8ea7b, type: 3}
+  visualPrefab: {fileID: 5629790347400826638, guid: 8032436a66bab6843bbaa170f5845004, type: 3}
   visualRotationOffsetZ: 0
