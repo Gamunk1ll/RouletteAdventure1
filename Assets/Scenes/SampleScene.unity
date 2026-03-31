@@ -2583,7 +2583,7 @@ MonoBehaviour:
   player: {fileID: 1753272180}
   enemies: []
   state: 0
-  shopPanel: {fileID: 0}
+  shopPanel: {fileID: 1852886164}
   battleUI: {fileID: 0}
   victoryPanel: {fileID: 0}
   shop: {fileID: 0}
@@ -2592,6 +2592,11 @@ MonoBehaviour:
   totalWaves: 15
   waveClearRewardBase: 8
   waveClearRewardPerWave: 2
+  enemyHealthGrowthPerWave: 12
+  enemyAttackBase: 8
+  enemyAttackGrowthPerWave: 2
+  enemyShieldBase: 5
+  enemyShieldGrowthPerWave: 1
   shopOpenDelay: 0.8
   shopCloseDelay: 0.8
 --- !u!114 &1458700648
@@ -3209,6 +3214,66 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &1852886164
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1852886166}
+  - component: {fileID: 1852886165}
+  m_Layer: 0
+  m_Name: ShopRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1852886165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1852886164}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e83ce3ea96024b143be973d0642e15ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Shop
+  possibleItems: []
+  slots: []
+  offersPerRoll: 6
+  uniqueOffers: 0
+  moneyText: {fileID: 0}
+  hintText: {fileID: 0}
+  rerollButton: {fileID: 0}
+  rerollPrice: 10
+  rerollPriceGrowthPerWave: 2
+  rerollPriceGrowthPerRoll: 3
+  wavePriceGrowth: 0.12
+  ballPurchaseAmount: 1
+  legacyMoneyText: {fileID: 0}
+  legacyHintText: {fileID: 0}
+  worldSpawnPoints: []
+  worldItemsParent: {fileID: 0}
+--- !u!4 &1852886166
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1852886164}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.63854, y: 1.41144, z: -7.07074}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1921857510
 GameObject:
   m_ObjectHideFlags: 0
@@ -6753,3 +6818,4 @@ SceneRoots:
   - {fileID: 543450652707409230}
   - {fileID: 5585966675299169605}
   - {fileID: 1007135099660031802}
+  - {fileID: 1852886166}

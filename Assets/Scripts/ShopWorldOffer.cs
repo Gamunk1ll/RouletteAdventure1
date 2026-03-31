@@ -4,14 +4,8 @@ using UnityEngine.UI;
 
 public class ShopWorldOffer : MonoBehaviour
 {
-    [Header("Optional 3D Labels")]
     public TMP_Text titleText;
     public TMP_Text priceText;
-
-    [Header("Legacy Labels")]
-    public Text legacyTitleText;
-    public Text legacyPriceText;
-
     private Shop shop;
     private int slotIndex;
     private int displayedPrice;
@@ -51,12 +45,6 @@ public class ShopWorldOffer : MonoBehaviour
 
         if (priceText != null)
             priceText.text = price;
-
-        if (legacyTitleText != null)
-            legacyTitleText.text = title;
-
-        if (legacyPriceText != null)
-            legacyPriceText.text = price;
     }
 
     private void TryAutoAssignTmpLabels()

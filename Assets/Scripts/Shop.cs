@@ -13,23 +13,18 @@ public class Shop : MonoBehaviour
         public TMP_Text titleText;
         public TMP_Text priceText;
         public Image iconImage;
-
-        [Header("Legacy UI (optional)")]
         public Text legacyTitleText;
         public Text legacyPriceText;
 
         [HideInInspector] public SectorData assignedSector;
     }
 
-    [Header("Data")]
     public SectorData[] possibleItems;
     public ShopSlot[] slots;
 
-    [Header("Generation")]
     [Min(1)] public int offersPerRoll = 6;
     public bool uniqueOffers = false;
 
-    [Header("UI")]
     public TMP_Text moneyText;
     public TMP_Text hintText;
     public Button rerollButton;
@@ -38,12 +33,9 @@ public class Shop : MonoBehaviour
     [Min(0)] public int rerollPriceGrowthPerRoll = 3;
     [Min(0f)] public float wavePriceGrowth = 0.12f;
     [Min(0)] public int ballPurchaseAmount = 1;
-
-    [Header("Legacy UI (optional)")]
     public Text legacyMoneyText;
     public Text legacyHintText;
 
-    [Header("3D Shop Offers")]
     public Transform[] worldSpawnPoints;
     public Transform worldItemsParent;
 

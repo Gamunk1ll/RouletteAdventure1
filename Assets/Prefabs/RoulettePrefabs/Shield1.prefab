@@ -105,3 +105,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseSector
   data: {fileID: 11400000, guid: 1738eb7d3af08ae45acd4c7b4329287e, type: 2}
+  visualRotationOffsetZ: 0

@@ -13,7 +13,7 @@ public class PlayerInventory : MonoBehaviour
     public static PlayerInventory Instance;
     public List<InventoryItem> inventory = new List<InventoryItem>();
     public List<SectorData> ownedBalls = new List<SectorData>();
-    public int MaxInventorySize = 4;
+    public int MaxInventorySize = 5;
     public Transform inventoryContainer;
     public GameObject inventorySlotPrefab;
     [Range(0f, 1f)] public float sellMultiplier = 0.75f;

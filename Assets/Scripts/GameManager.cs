@@ -27,7 +27,6 @@ public class GameManager : MonoBehaviour
     public Shop shop;
     public BattleShopStageController stageController;
 
-    [Header("Progression")]
     public int currentWave = 1;
     public int totalWaves = 15;
     public int waveClearRewardBase = 8;
@@ -38,7 +37,6 @@ public class GameManager : MonoBehaviour
     public int enemyShieldBase = 5;
     public int enemyShieldGrowthPerWave = 1;
 
-    [Header("Shop Transition")]
     public float shopOpenDelay = 0.8f;
     public float shopCloseDelay = 0.8f;
 
