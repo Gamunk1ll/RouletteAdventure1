@@ -21,6 +21,7 @@ public class GameManager : MonoBehaviour
 
     public BattleState state = BattleState.WaitingForPlayer;
 
+    [Header("Legacy UI (optional)")]
     public GameObject shopPanel;
     public GameObject battleUI;
     public GameObject victoryPanel;
@@ -36,6 +37,8 @@ public class GameManager : MonoBehaviour
     public int enemyAttackGrowthPerWave = 2;
     public int enemyShieldBase = 5;
     public int enemyShieldGrowthPerWave = 1;
+    [Min(1)] public int minEnemiesPerWave = 1;
+    [Min(1)] public int maxEnemiesPerWave = 3;
 
     public float shopOpenDelay = 0.8f;
     public float shopCloseDelay = 0.8f;
@@ -285,6 +288,9 @@ public class GameManager : MonoBehaviour
         if (battleUI != null)
             battleUI.SetActive(true);
 
+        if (!PrepareNextWave())
+            yield break;
+
         state = BattleState.WaitingForPlayer;
         AddBalls(3);
     }
@@ -307,16 +313,7 @@ public class GameManager : MonoBehaviour
 
     public void NextLevel()
     {
-        defeatedEnemies = 0;
-        currentWave++;
-
-        if (currentWave > totalWaves)
-            Victory();
-        else
-        {
-            CloseShop();
-            SpawnEnemiesForWave(currentWave);
-        }
+        CloseShop();
     }
 
     public void SpawnEnemiesForWave(int waveNumber)
@@ -326,7 +323,9 @@ public class GameManager : MonoBehaviour
 
         waveRewardGranted = false;
 
-        int enemiesCount = Mathf.Min(waveNumber, enemies.Length);
+        int minCount = Mathf.Clamp(minEnemiesPerWave, 1, enemies.Length);
+        int maxCount = Mathf.Clamp(maxEnemiesPerWave, minCount, enemies.Length);
+        int enemiesCount = Random.Range(minCount, maxCount + 1);
 
         for (int i = 0; i < enemies.Length; i++)
         {
@@ -360,5 +359,20 @@ public class GameManager : MonoBehaviour
             player.AddMoney(reward);
 
         waveRewardGranted = true;
+    }
+
+    private bool PrepareNextWave()
+    {
+        defeatedEnemies = 0;
+        currentWave++;
+
+        if (currentWave > totalWaves)
+        {
+            Victory();
+            return false;
+        }
+
+        SpawnEnemiesForWave(currentWave);
+        return true;
     }
 }

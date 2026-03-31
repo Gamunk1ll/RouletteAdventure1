@@ -38,13 +38,22 @@ public class Shop : MonoBehaviour
 
     public Transform[] worldSpawnPoints;
     public Transform worldItemsParent;
+    [Tooltip("Optional: objects that should be enabled only while the shop phase is active.")]
+    public GameObject[] shopPhaseObjects;
 
     private readonly List<GameObject> spawnedWorldItems = new();
+    private readonly List<SectorData> currentOffers = new();
     private Player player;
     private int rerollsThisShopStage;
 
     private void Awake()
     {
+        if (slots == null)
+            slots = Array.Empty<ShopSlot>();
+
+        if (worldSpawnPoints == null)
+            worldSpawnPoints = Array.Empty<Transform>();
+
         if (rerollButton != null)
         {
             rerollButton.onClick.RemoveListener(RerollShop);
@@ -80,14 +89,14 @@ public class Shop : MonoBehaviour
             player = GameManager.Instance != null ? GameManager.Instance.player : FindObjectOfType<Player>();
 
         rerollsThisShopStage = 0;
+        SetShopPhaseObjectsActive(true);
         RollItems();
-        gameObject.SetActive(true);
     }
 
     public void Close()
     {
         ClearWorldItems();
-        gameObject.SetActive(false);
+        SetShopPhaseObjectsActive(false);
     }
 
     public void RollItems()
@@ -95,7 +104,10 @@ public class Shop : MonoBehaviour
         if (possibleItems == null || possibleItems.Length == 0)
             return;
 
-        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
+        int activeOffers = GetActiveOfferCount();
+        currentOffers.Clear();
+        for (int i = 0; i < activeOffers; i++)
+            currentOffers.Add(null);
 
         bool useUniqueOffers = uniqueOffers || possibleItems.Length >= activeOffers;
         if (useUniqueOffers)
@@ -106,7 +118,7 @@ public class Shop : MonoBehaviour
             for (int i = 0; i < activeOffers; i++)
             {
                 SectorData item = pool[i % pool.Count];
-                BindItemToSlot(slots[i], item);
+                SetOffer(i, item);
             }
         }
         else
@@ -114,12 +126,12 @@ public class Shop : MonoBehaviour
             for (int i = 0; i < activeOffers; i++)
             {
                 SectorData item = possibleItems[UnityEngine.Random.Range(0, possibleItems.Length)];
-                BindItemToSlot(slots[i], item);
+                SetOffer(i, item);
             }
         }
 
         for (int i = activeOffers; i < slots.Length; i++)
-            BindItemToSlot(slots[i], null);
+            BindItemToSlot(i, null);
 
         RespawnWorldItems();
         UpdateButtonsState();
@@ -144,14 +156,14 @@ public class Shop : MonoBehaviour
 
     public void TryBuy(int slotIndex)
     {
-        if (slotIndex < 0 || slotIndex >= slots.Length)
+        if (!IsOfferIndexValid(slotIndex))
             return;
 
-        var slot = slots[slotIndex];
-        if (slot.assignedSector == null || player == null)
+        SectorData selectedItem = currentOffers[slotIndex];
+        if (selectedItem == null || player == null)
             return;
 
-        int price = GetBuyPrice(slot.assignedSector);
+        int price = GetBuyPrice(selectedItem);
         if (player.GetMoney() < price)
         {
             SetHint($"Need {price}$");
@@ -166,36 +178,49 @@ public class Shop : MonoBehaviour
         }
 
         bool added;
-        if (slot.assignedSector.shopItemKind == ShopItemKind.Ball)
+        if (selectedItem.shopItemKind == ShopItemKind.Ball)
         {
-            added = inventory.AddBall(slot.assignedSector);
+            added = inventory.AddBall(selectedItem);
             BallManager ballManager = FindObjectOfType<BallManager>();
             if (added && ballManager != null)
                 ballManager.AddBalls(Mathf.Max(1, ballPurchaseAmount));
         }
         else
         {
-            added = inventory.AddSector(slot.assignedSector, price);
+            added = inventory.AddSector(selectedItem, price);
         }
 
         if (!added)
         {
-            SetHint(slot.assignedSector.shopItemKind == ShopItemKind.Ball
+            SetHint(selectedItem.shopItemKind == ShopItemKind.Ball
                 ? "Failed to add ball"
                 : "Inventory is full. Sell sector/turret first");
             return;
         }
 
         player.AddMoney(-price);
-        SetHint($"Bought: {slot.assignedSector.name}");
+        SetHint($"Bought: {selectedItem.name}");
 
-        BindItemToSlot(slot, null);
+        SetOffer(slotIndex, null);
         ClearWorldItem(slotIndex);
         UpdateButtonsState();
     }
 
-    private void BindItemToSlot(ShopSlot slot, SectorData item)
+    private void SetOffer(int index, SectorData item)
     {
+        if (!IsOfferIndexValid(index))
+            return;
+
+        currentOffers[index] = item;
+        BindItemToSlot(index, item);
+    }
+
+    private void BindItemToSlot(int index, SectorData item)
+    {
+        if (index < 0 || index >= slots.Length)
+            return;
+
+        ShopSlot slot = slots[index];
         slot.assignedSector = item;
 
         if (item == null)
@@ -218,7 +243,7 @@ public class Shop : MonoBehaviour
         if (worldSpawnPoints == null || worldSpawnPoints.Length == 0)
             return;
 
-        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
+        int activeOffers = GetActiveOfferCount();
 
         for (int i = 0; i < activeOffers; i++)
         {
@@ -228,15 +253,19 @@ public class Shop : MonoBehaviour
                 continue;
 
             Transform spawnPoint = worldSpawnPoints[i];
-            if (spawnPoint == null || slots[i].assignedSector == null)
+            if (spawnPoint == null || currentOffers[i] == null)
                 continue;
 
-            GameObject visualPrefab = slots[i].assignedSector.visualPrefab;
+            SectorData item = currentOffers[i];
+            GameObject visualPrefab = item.visualPrefab;
             if (visualPrefab == null)
                 continue;
 
-            Transform parent = worldItemsParent != null ? worldItemsParent : spawnPoint;
-            GameObject itemView = Instantiate(visualPrefab, spawnPoint.position, spawnPoint.rotation, parent);
+            GameObject itemView = Instantiate(visualPrefab);
+            itemView.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+
+            if (worldItemsParent != null)
+                itemView.transform.SetParent(worldItemsParent, true);
 
             if (itemView.GetComponent<Collider>() == null)
                 itemView.AddComponent<BoxCollider>();
@@ -245,7 +274,7 @@ public class Shop : MonoBehaviour
             if (offer == null)
                 offer = itemView.AddComponent<ShopWorldOffer>();
 
-            offer.Setup(this, i, slots[i].assignedSector, GetBuyPrice(slots[i].assignedSector));
+            offer.Setup(this, i, item, GetBuyPrice(item));
             spawnedWorldItems[i] = itemView;
         }
     }
@@ -277,18 +306,19 @@ public class Shop : MonoBehaviour
         int currentMoney = player != null ? player.GetMoney() : 0;
         PlayerInventory inventory = PlayerInventory.Instance;
 
-        int activeOffers = Mathf.Min(offersPerRoll, slots.Length);
+        int activeOffers = GetActiveOfferCount();
         for (int i = 0; i < slots.Length; i++)
         {
             if (slots[i].buyButton == null)
                 continue;
 
-            bool hasItem = i < activeOffers && slots[i].assignedSector != null;
-            bool enoughMoney = hasItem && currentMoney >= GetBuyPrice(slots[i].assignedSector);
+            SectorData item = i < activeOffers && i < currentOffers.Count ? currentOffers[i] : null;
+            bool hasItem = item != null;
+            bool enoughMoney = hasItem && currentMoney >= GetBuyPrice(item);
             bool hasSlotSpace = true;
 
             if (hasItem &&
-                slots[i].assignedSector.shopItemKind != ShopItemKind.Ball &&
+                item.shopItemKind != ShopItemKind.Ball &&
                 inventory != null)
             {
                 hasSlotSpace = inventory.inventory.Count < inventory.MaxInventorySize;
@@ -354,6 +384,33 @@ public class Shop : MonoBehaviour
         {
             int j = UnityEngine.Random.Range(0, i + 1);
             (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
+    private bool IsOfferIndexValid(int index)
+    {
+        return index >= 0 && index < currentOffers.Count;
+    }
+
+    private int GetActiveOfferCount()
+    {
+        int pointsCount = worldSpawnPoints.Length;
+        int maxBySlotsOrPoints = Mathf.Max(slots.Length, pointsCount);
+        if (maxBySlotsOrPoints <= 0)
+            maxBySlotsOrPoints = offersPerRoll;
+
+        return Mathf.Min(offersPerRoll, maxBySlotsOrPoints);
+    }
+
+    private void SetShopPhaseObjectsActive(bool active)
+    {
+        if (shopPhaseObjects == null)
+            return;
+
+        for (int i = 0; i < shopPhaseObjects.Length; i++)
+        {
+            if (shopPhaseObjects[i] != null)
+                shopPhaseObjects[i].SetActive(active);
         }
     }
 }
