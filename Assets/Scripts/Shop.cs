@@ -38,6 +38,8 @@ public class Shop : MonoBehaviour
 
     public Transform[] worldSpawnPoints;
     public Transform worldItemsParent;
+    [Tooltip("Optional: objects that should be enabled only while the shop phase is active.")]
+    public GameObject[] shopPhaseObjects;
 
     private readonly List<GameObject> spawnedWorldItems = new();
     private readonly List<SectorData> currentOffers = new();
@@ -87,14 +89,14 @@ public class Shop : MonoBehaviour
             player = GameManager.Instance != null ? GameManager.Instance.player : FindObjectOfType<Player>();
 
         rerollsThisShopStage = 0;
+        SetShopPhaseObjectsActive(true);
         RollItems();
-        gameObject.SetActive(true);
     }
 
     public void Close()
     {
         ClearWorldItems();
-        gameObject.SetActive(false);
+        SetShopPhaseObjectsActive(false);
     }
 
     public void RollItems()
@@ -259,8 +261,11 @@ public class Shop : MonoBehaviour
             if (visualPrefab == null)
                 continue;
 
-            Transform parent = worldItemsParent != null ? worldItemsParent : spawnPoint;
-            GameObject itemView = Instantiate(visualPrefab, spawnPoint.position, spawnPoint.rotation, parent);
+            GameObject itemView = Instantiate(visualPrefab);
+            itemView.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+
+            if (worldItemsParent != null)
+                itemView.transform.SetParent(worldItemsParent, true);
 
             if (itemView.GetComponent<Collider>() == null)
                 itemView.AddComponent<BoxCollider>();
