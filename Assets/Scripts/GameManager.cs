@@ -20,8 +20,6 @@ public class GameManager : MonoBehaviour
     public Enemy[] enemies;
 
     public BattleState state = BattleState.WaitingForPlayer;
-
-    [Header("Legacy UI (optional)")]
     public GameObject shopPanel;
     public GameObject battleUI;
     public GameObject victoryPanel;

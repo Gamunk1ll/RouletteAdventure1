@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Money_2
   m_EditorClassIdentifier: Assembly-CSharp::SectorData
   Type: 3
+  shopItemKind: 0
   basePower: 4
   size: 2
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 4801697913320446432, guid: b33f7dbb646d97c48a21ee23e585fc0c, type: 3}
+  visualPrefab: {fileID: 6556598114293189667, guid: edd1af2ffca2eb54ba901370b3078e62, type: 3}
   visualRotationOffsetZ: 0

@@ -89,14 +89,14 @@ public class Shop : MonoBehaviour
             player = GameManager.Instance != null ? GameManager.Instance.player : FindObjectOfType<Player>();
 
         rerollsThisShopStage = 0;
-        SetShopPhaseObjectsActive(true);
+        ToggleShopPhaseObjects(true);
         RollItems();
     }
 
     public void Close()
     {
         ClearWorldItems();
-        SetShopPhaseObjectsActive(false);
+        ToggleShopPhaseObjects(false);
     }
 
     public void RollItems()
@@ -400,5 +400,17 @@ public class Shop : MonoBehaviour
             maxBySlotsOrPoints = offersPerRoll;
 
         return Mathf.Min(offersPerRoll, maxBySlotsOrPoints);
+    }
+
+    private void ToggleShopPhaseObjects(bool active)
+    {
+        if (shopPhaseObjects == null)
+            return;
+
+        for (int i = 0; i < shopPhaseObjects.Length; i++)
+        {
+            if (shopPhaseObjects[i] != null)
+                shopPhaseObjects[i].SetActive(active);
+        }
     }
 }
