@@ -401,16 +401,4 @@ public class Shop : MonoBehaviour
 
         return Mathf.Min(offersPerRoll, maxBySlotsOrPoints);
     }
-
-    private void SetShopPhaseObjectsActive(bool active)
-    {
-        if (shopPhaseObjects == null)
-            return;
-
-        for (int i = 0; i < shopPhaseObjects.Length; i++)
-        {
-            if (shopPhaseObjects[i] != null)
-                shopPhaseObjects[i].SetActive(active);
-        }
-    }
 }
