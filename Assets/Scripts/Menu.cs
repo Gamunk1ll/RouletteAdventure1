@@ -3,11 +3,8 @@ using UnityEngine;
 
 public class MenuBlurController : MonoBehaviour
 {
-    [Header("UI Elements")]
     public GameObject menuPanel;
 
-    [Header("Blur Settings")]
-    [Tooltip("Assign your Volume component (URP/HDRP) here. Kept as Component to avoid hard dependency on render pipeline assemblies.")]
     public Component postProcessVolume;
     public float blurAmount = 1f;
 
@@ -98,7 +95,6 @@ public class MenuBlurController : MonoBehaviour
 
         if (_volumeWeightProperty == null || _volumeWeightProperty.PropertyType != typeof(float))
         {
-            Debug.LogWarning($"'{postProcessVolume.GetType().Name}' does not expose a float 'weight' property.", this);
             _volumeWeightProperty = null;
         }
     }
