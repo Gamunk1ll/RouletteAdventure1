@@ -323,14 +323,33 @@ public class GameManager : MonoBehaviour
 
         int minCount = Mathf.Clamp(minEnemiesPerWave, 1, enemies.Length);
         int maxCount = Mathf.Clamp(maxEnemiesPerWave, minCount, enemies.Length);
-        int enemiesCount = Random.Range(minCount, maxCount + 1);
+        int enemiesCount = waveNumber == 1
+            ? 1
+            : Random.Range(minCount, maxCount + 1);
+
+        List<int> availableIndices = new List<int>();
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            if (enemies[i] != null)
+                availableIndices.Add(i);
+        }
+
+        enemiesCount = Mathf.Min(enemiesCount, availableIndices.Count);
+        HashSet<int> activeIndices = new HashSet<int>();
+
+        for (int i = 0; i < enemiesCount; i++)
+        {
+            int randomPick = Random.Range(0, availableIndices.Count);
+            activeIndices.Add(availableIndices[randomPick]);
+            availableIndices.RemoveAt(randomPick);
+        }
 
         for (int i = 0; i < enemies.Length; i++)
         {
             if (enemies[i] == null)
                 continue;
 
-            bool shouldBeActive = i < enemiesCount;
+            bool shouldBeActive = activeIndices.Contains(i);
             enemies[i].gameObject.SetActive(shouldBeActive);
 
             if (!shouldBeActive)

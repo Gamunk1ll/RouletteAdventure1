@@ -38,7 +38,6 @@ public class Shop : MonoBehaviour
 
     public Transform[] worldSpawnPoints;
     public Transform worldItemsParent;
-    [Tooltip("Optional: objects that should be enabled only while the shop phase is active.")]
     public GameObject[] shopPhaseObjects;
 
     private readonly List<GameObject> spawnedWorldItems = new();
@@ -145,7 +144,6 @@ public class Shop : MonoBehaviour
         int currentRerollPrice = GetCurrentRerollPrice();
         if (player.GetMoney() < currentRerollPrice)
         {
-            SetHint($"Not enough money to reroll ({currentRerollPrice}$)");
             return;
         }
 
@@ -193,8 +191,6 @@ public class Shop : MonoBehaviour
         if (!added)
         {
             SetHint(selectedItem.shopItemKind == ShopItemKind.Ball
-                ? "Failed to add ball"
-                : "Inventory is full. Sell sector/turret first");
             return;
         }
 

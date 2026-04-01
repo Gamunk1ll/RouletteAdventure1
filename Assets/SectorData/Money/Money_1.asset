@@ -19,5 +19,7 @@ MonoBehaviour:
   sellPrice: 0
   buyPrice: 0
   icon: {fileID: 0}
-  visualPrefab: {fileID: 4837818536500245254, guid: b597b509fb01a454c9e6f5de2eecdc8b, type: 3}
+  visualPrefab: {fileID: 0}
+  shopVisualPrefab: {fileID: 5246716929106022630, guid: 72c5daa14b33829459145c5017647e62, type: 3}
+  rouletteVisualPrefab: {fileID: 545353380755462920, guid: 64efb82ff1dcc59478ee6e724e7849d7, type: 3}
   visualRotationOffsetZ: 0

@@ -58,8 +58,7 @@ public class RouletteInitializer : MonoBehaviour
             }
 
             GameObject prefab = sectorPrefabs[prefabIndex];
-            GameObject roulettePrefab = ResolveRoulettePrefab(prefab);
-            BaseSector prefabSector = ResolveSectorComponent(roulettePrefab);
+            BaseSector prefabSector = ResolveSectorComponent(prefab);
 
             if (prefabSector == null || prefabSector.data == null)
             {
@@ -72,7 +71,7 @@ public class RouletteInitializer : MonoBehaviour
                 continue;
             }
 
-            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, roulettePrefab);
+            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, prefab);
             if (spawnedSector == null)
             {
                 continue;
@@ -115,7 +114,32 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
-        ApplyRouletteVisualOverride(sectorObj, sector.data);
+        if (sector.data != null && sector.data.rouletteVisualPrefab != null)
+        {
+            GameObject overrideVisual = Instantiate(sector.data.rouletteVisualPrefab, sectorObj.transform, false);
+            overrideVisual.name = $"{sector.data.rouletteVisualPrefab.name}_Visual";
+            overrideVisual.transform.localPosition = Vector3.zero;
+            overrideVisual.transform.localRotation = Quaternion.identity;
+            overrideVisual.transform.localScale = Vector3.one;
+
+            Renderer[] overrideRendererArray = overrideVisual.GetComponentsInChildren<Renderer>(true);
+            if (overrideRendererArray.Length > 0)
+            {
+                HashSet<Renderer> overrideRenderers = new HashSet<Renderer>(overrideRendererArray);
+                Renderer[] allRenderers = sectorObj.GetComponentsInChildren<Renderer>(true);
+
+                for (int i = 0; i < allRenderers.Length; i++)
+                {
+                    Renderer renderer = allRenderers[i];
+                    if (renderer != null && !overrideRenderers.Contains(renderer))
+                        renderer.enabled = false;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Roulette visual override '{overrideVisual.name}' has no Renderer. Keeping original sector renderers.");
+            }
+        }
 
         Quaternion computedSectorRotation = CalculateSectorLocalRotation(
             startSlot,
@@ -127,7 +151,15 @@ public class RouletteInitializer : MonoBehaviour
         sectorObj.transform.localRotation = computedSectorRotation;
         FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
-        Renderer[] slotRenderers = GetVisibleRenderers(sectorObj);
+        Renderer[] allSectorRenderers = sectorObj.GetComponentsInChildren<Renderer>(true);
+        List<Renderer> visibleRenderers = new List<Renderer>(allSectorRenderers.Length);
+        for (int i = 0; i < allSectorRenderers.Length; i++)
+        {
+            if (allSectorRenderers[i] != null && allSectorRenderers[i].enabled)
+                visibleRenderers.Add(allSectorRenderers[i]);
+        }
+
+        Renderer[] slotRenderers = visibleRenderers.ToArray();
         Renderer sectorRenderer = slotRenderers.Length > 0 ? slotRenderers[0] : null;
         bool usingPerSlotVisuals = slotRenderers.Length >= size;
 
@@ -356,22 +388,6 @@ public class RouletteInitializer : MonoBehaviour
 
         BaseSector sector = sectorObject.GetComponent<BaseSector>();
         return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
-    }
-
-    private static GameObject ResolveRoulettePrefab(GameObject sourcePrefab)
-    {
-        if (sourcePrefab == null)
-            return null;
-
-        BaseSector sourceSector = ResolveSectorComponent(sourcePrefab);
-        if (sourceSector != null &&
-            sourceSector.data != null &&
-            sourceSector.data.rouletteVisualPrefab != null)
-        {
-            return sourceSector.data.rouletteVisualPrefab;
-        }
-
-        return sourcePrefab;
     }
 
     private void CaptureSlotPlaceholders()
