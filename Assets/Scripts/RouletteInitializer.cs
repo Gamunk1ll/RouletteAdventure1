@@ -114,6 +114,8 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
+        ApplyRouletteVisualOverride(sectorObj, sector.data);
+
         Quaternion computedSectorRotation = CalculateSectorLocalRotation(
             startSlot,
             size,
@@ -124,8 +126,8 @@ public class RouletteInitializer : MonoBehaviour
         sectorObj.transform.localRotation = computedSectorRotation;
         FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
-        Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
-        Renderer[] slotRenderers = sector.GetComponentsInChildren<Renderer>(true);
+        Renderer[] slotRenderers = GetVisibleRenderers(sectorObj);
+        Renderer sectorRenderer = slotRenderers.Length > 0 ? slotRenderers[0] : null;
         bool usingPerSlotVisuals = slotRenderers.Length >= size;
 
         for (int i = startSlot; i <= endSlot; i++)
@@ -353,6 +355,43 @@ public class RouletteInitializer : MonoBehaviour
 
         BaseSector sector = sectorObject.GetComponent<BaseSector>();
         return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
+    }
+
+    private static Renderer[] GetVisibleRenderers(GameObject owner)
+    {
+        if (owner == null)
+            return System.Array.Empty<Renderer>();
+
+        Renderer[] all = owner.GetComponentsInChildren<Renderer>(true);
+        List<Renderer> visible = new List<Renderer>(all.Length);
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] != null && all[i].enabled)
+                visible.Add(all[i]);
+        }
+        return visible.ToArray();
+    }
+
+    private static void ApplyRouletteVisualOverride(GameObject sectorRoot, SectorData data)
+    {
+        if (sectorRoot == null || data == null || data.rouletteVisualPrefab == null)
+            return;
+
+        GameObject overrideVisual = Instantiate(data.rouletteVisualPrefab, sectorRoot.transform, false);
+        overrideVisual.name = $"{data.rouletteVisualPrefab.name}_Visual";
+        overrideVisual.transform.localPosition = Vector3.zero;
+        overrideVisual.transform.localRotation = Quaternion.identity;
+        overrideVisual.transform.localScale = Vector3.one;
+
+        HashSet<Renderer> overrideRenderers = new HashSet<Renderer>(overrideVisual.GetComponentsInChildren<Renderer>(true));
+        Renderer[] allRenderers = sectorRoot.GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < allRenderers.Length; i++)
+        {
+            Renderer renderer = allRenderers[i];
+            if (renderer != null && !overrideRenderers.Contains(renderer))
+                renderer.enabled = false;
+        }
     }
 
     private void CaptureSlotPlaceholders()
