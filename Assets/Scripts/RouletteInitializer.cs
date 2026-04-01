@@ -58,7 +58,8 @@ public class RouletteInitializer : MonoBehaviour
             }
 
             GameObject prefab = sectorPrefabs[prefabIndex];
-            BaseSector prefabSector = ResolveSectorComponent(prefab);
+            GameObject roulettePrefab = ResolveRoulettePrefab(prefab);
+            BaseSector prefabSector = ResolveSectorComponent(roulettePrefab);
 
             if (prefabSector == null || prefabSector.data == null)
             {
@@ -71,7 +72,7 @@ public class RouletteInitializer : MonoBehaviour
                 continue;
             }
 
-            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, prefab);
+            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, roulettePrefab);
             if (spawnedSector == null)
             {
                 continue;
@@ -353,6 +354,22 @@ public class RouletteInitializer : MonoBehaviour
 
         BaseSector sector = sectorObject.GetComponent<BaseSector>();
         return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
+    }
+
+    private static GameObject ResolveRoulettePrefab(GameObject sourcePrefab)
+    {
+        if (sourcePrefab == null)
+            return null;
+
+        BaseSector sourceSector = ResolveSectorComponent(sourcePrefab);
+        if (sourceSector != null &&
+            sourceSector.data != null &&
+            sourceSector.data.rouletteVisualPrefab != null)
+        {
+            return sourceSector.data.rouletteVisualPrefab;
+        }
+
+        return sourcePrefab;
     }
 
     private void CaptureSlotPlaceholders()
