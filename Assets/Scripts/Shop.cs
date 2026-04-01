@@ -257,7 +257,7 @@ public class Shop : MonoBehaviour
                 continue;
 
             SectorData item = currentOffers[i];
-            GameObject visualPrefab = item.visualPrefab;
+            GameObject visualPrefab = ResolveShopVisualPrefab(item);
             if (visualPrefab == null)
                 continue;
 
@@ -277,6 +277,17 @@ public class Shop : MonoBehaviour
             offer.Setup(this, i, item, GetBuyPrice(item));
             spawnedWorldItems[i] = itemView;
         }
+    }
+
+    private static GameObject ResolveShopVisualPrefab(SectorData item)
+    {
+        if (item == null)
+            return null;
+
+        if (item.shopVisualPrefab != null)
+            return item.shopVisualPrefab;
+
+        return item.visualPrefab;
     }
 
     private void ClearWorldItems()
