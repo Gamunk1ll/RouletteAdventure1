@@ -115,6 +115,8 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
+        ApplyRouletteVisualOverride(sectorObj, sector.data);
+
         Quaternion computedSectorRotation = CalculateSectorLocalRotation(
             startSlot,
             size,
@@ -125,8 +127,8 @@ public class RouletteInitializer : MonoBehaviour
         sectorObj.transform.localRotation = computedSectorRotation;
         FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
 
-        Renderer sectorRenderer = sector.GetComponentInChildren<Renderer>(true);
-        Renderer[] slotRenderers = sector.GetComponentsInChildren<Renderer>(true);
+        Renderer[] slotRenderers = GetVisibleRenderers(sectorObj);
+        Renderer sectorRenderer = slotRenderers.Length > 0 ? slotRenderers[0] : null;
         bool usingPerSlotVisuals = slotRenderers.Length >= size;
 
         for (int i = startSlot; i <= endSlot; i++)
