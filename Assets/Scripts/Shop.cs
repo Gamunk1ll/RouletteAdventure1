@@ -191,6 +191,8 @@ public class Shop : MonoBehaviour
         if (!added)
         {
             SetHint(selectedItem.shopItemKind == ShopItemKind.Ball
+                ? "Cannot buy this ball"
+                : "Inventory full");
             return;
         }
 
