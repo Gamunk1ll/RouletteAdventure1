@@ -15,14 +15,12 @@ public class RouletteInitializer : MonoBehaviour
     public float sectorScaleMultiplier = 1f;
     public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
-    [Tooltip("If enabled, sectors are positioned by slot anchors so active sectors visually replace gray placeholders.")]
     public bool useSlotAnchorsForSpawn = true;
     public bool placeAtWheelCenter = true;
     public Transform wheelCenter;
     public Transform spawnedSectorsParent;
     public Vector3 sectorPositionOffset;
     public bool hideGraySlots = true;
-    [Tooltip("Optional transforms that explicitly define each slot position/rotation. If empty, Slot transforms are used.")]
     public List<Transform> slotSpawnAnchors = new();
 
     private readonly List<BaseSector> activeSectors = new();
@@ -66,7 +64,6 @@ public class RouletteInitializer : MonoBehaviour
         }
 
         useSlotAnchorsForSpawn = true;
-        Debug.LogWarning("RouletteInitializer: detected legacy center-spawn configuration. Auto-enabled useSlotAnchorsForSpawn to prevent stacked sectors.");
     }
 
     public void InitializeRoulette()
@@ -190,7 +187,6 @@ public class RouletteInitializer : MonoBehaviour
             else
             {
                 Destroy(overrideVisual);
-                Debug.LogWarning($"Roulette visual override for '{sector.data.name}' has missing mesh/sprite render data. Using base visual prefab renderers.");
             }
         }
 
@@ -215,7 +211,6 @@ public class RouletteInitializer : MonoBehaviour
         if (visibleRenderers.Count == 0 && appliedValidOverrideVisual)
         {
             string sectorName = sector.data != null ? sector.data.name : sector.name;
-            Debug.LogWarning($"Sector '{sectorName}' resolved with empty renderers after override. Falling back to slot placeholder tint.");
         }
 
         Renderer[] slotRenderers = visibleRenderers.ToArray();
