@@ -15,15 +15,20 @@ public class RouletteInitializer : MonoBehaviour
     public float sectorScaleMultiplier = 1f;
     public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
+    [Tooltip("If enabled, sectors are positioned by slot anchors so active sectors visually replace gray placeholders.")]
+    public bool useSlotAnchorsForSpawn = true;
     public bool placeAtWheelCenter = true;
     public Transform wheelCenter;
     public Transform spawnedSectorsParent;
     public Vector3 sectorPositionOffset;
     public bool hideGraySlots = true;
+    [Tooltip("Optional transforms that explicitly define each slot position/rotation. If empty, Slot transforms are used.")]
+    public List<Transform> slotSpawnAnchors = new();
 
     private readonly List<BaseSector> activeSectors = new();
     private List<int> slotToSectorMap = new();
     private readonly List<Renderer> slotPlaceholderVisuals = new();
+    private readonly List<Color> slotPlaceholderBaseColors = new();
 
     private void Start()
     {
@@ -114,6 +119,7 @@ public class RouletteInitializer : MonoBehaviour
             return null;
         }
 
+        bool appliedValidOverrideVisual = false;
         if (sector.data != null && sector.data.rouletteVisualPrefab != null)
         {
             GameObject overrideVisual = Instantiate(sector.data.rouletteVisualPrefab, sectorObj.transform, false);
@@ -123,7 +129,17 @@ public class RouletteInitializer : MonoBehaviour
             overrideVisual.transform.localScale = Vector3.one;
 
             Renderer[] overrideRendererArray = overrideVisual.GetComponentsInChildren<Renderer>(true);
-            if (overrideRendererArray.Length > 0)
+            bool hasValidOverrideRenderer = false;
+            for (int i = 0; i < overrideRendererArray.Length; i++)
+            {
+                if (HasRenderableGeometry(overrideRendererArray[i]))
+                {
+                    hasValidOverrideRenderer = true;
+                    break;
+                }
+            }
+
+            if (hasValidOverrideRenderer)
             {
                 HashSet<Renderer> overrideRenderers = new HashSet<Renderer>(overrideRendererArray);
                 Renderer[] allRenderers = sectorObj.GetComponentsInChildren<Renderer>(true);
@@ -134,10 +150,13 @@ public class RouletteInitializer : MonoBehaviour
                     if (renderer != null && !overrideRenderers.Contains(renderer))
                         renderer.enabled = false;
                 }
+
+                appliedValidOverrideVisual = true;
             }
             else
             {
-                Debug.LogWarning($"Roulette visual override '{overrideVisual.name}' has no Renderer. Keeping original sector renderers.");
+                Destroy(overrideVisual);
+                Debug.LogWarning($"Roulette visual override for '{sector.data.name}' has missing mesh/sprite render data. Using base visual prefab renderers.");
             }
         }
 
@@ -155,22 +174,40 @@ public class RouletteInitializer : MonoBehaviour
         List<Renderer> visibleRenderers = new List<Renderer>(allSectorRenderers.Length);
         for (int i = 0; i < allSectorRenderers.Length; i++)
         {
-            if (allSectorRenderers[i] != null && allSectorRenderers[i].enabled)
+            if (allSectorRenderers[i] != null && allSectorRenderers[i].enabled && HasRenderableGeometry(allSectorRenderers[i]))
                 visibleRenderers.Add(allSectorRenderers[i]);
+        }
+
+        if (visibleRenderers.Count == 0 && appliedValidOverrideVisual)
+        {
+            string sectorName = sector.data != null ? sector.data.name : sector.name;
+            Debug.LogWarning($"Sector '{sectorName}' resolved with empty renderers after override. Falling back to slot placeholder tint.");
         }
 
         Renderer[] slotRenderers = visibleRenderers.ToArray();
         Renderer sectorRenderer = slotRenderers.Length > 0 ? slotRenderers[0] : null;
         bool usingPerSlotVisuals = slotRenderers.Length >= size;
+        bool fallbackToSlotPlaceholder = sectorRenderer == null;
 
         for (int i = startSlot; i <= endSlot; i++)
         {
             allSlots[i].sector = sector;
             allSlots[i].index = i;
-            allSlots[i].visual = usingPerSlotVisuals
-                ? slotRenderers[i - startSlot]
-                : sectorRenderer;
-            SetGraySlotVisible(i, false);
+            if (fallbackToSlotPlaceholder)
+            {
+                Renderer placeholder = i < slotPlaceholderVisuals.Count ? slotPlaceholderVisuals[i] : null;
+                allSlots[i].visual = placeholder;
+                SetGraySlotVisible(i, true);
+                ApplySlotPlaceholderColor(i, sector.data != null ? sector.data.Type : SectorType.Attack);
+            }
+            else
+            {
+                allSlots[i].visual = usingPerSlotVisuals
+                    ? slotRenderers[i - startSlot]
+                    : sectorRenderer;
+                SetGraySlotVisible(i, false);
+                RestoreSlotPlaceholderColor(i);
+            }
         }
 
         activeSectors.Add(sectorObj.GetComponent<BaseSector>() ?? sector);
@@ -194,7 +231,7 @@ public class RouletteInitializer : MonoBehaviour
 
     private Vector3 CalculateSectorPosition(int startSlot, int endSlot)
     {
-        if (placeAtWheelCenter)
+        if (!useSlotAnchorsForSpawn && placeAtWheelCenter)
         {
             return wheelCenter != null ? wheelCenter.position : transform.position;
         }
@@ -204,13 +241,13 @@ public class RouletteInitializer : MonoBehaviour
 
         for (int i = startSlot; i <= endSlot; i++)
         {
-            Slot slot = allSlots[i];
-            if (slot == null)
+            Transform anchor = GetSlotAnchor(i);
+            if (anchor == null)
             {
                 continue;
             }
 
-            accumulated += slot.transform.position;
+            accumulated += anchor.position;
             count++;
         }
 
@@ -235,8 +272,8 @@ public class RouletteInitializer : MonoBehaviour
             int leftIndex = Mathf.Clamp(Mathf.FloorToInt(slotCenterIndex), 0, allSlots.Count - 1);
             int rightIndex = Mathf.Clamp(Mathf.CeilToInt(slotCenterIndex), 0, allSlots.Count - 1);
 
-            Slot leftSlot = allSlots[leftIndex];
-            Slot rightSlot = allSlots[rightIndex];
+            Transform leftSlot = GetSlotAnchor(leftIndex);
+            Transform rightSlot = GetSlotAnchor(rightIndex);
 
             if (leftSlot != null || rightSlot != null)
             {
@@ -336,7 +373,14 @@ public class RouletteInitializer : MonoBehaviour
         float width = 0f;
         for (int i = startSlot; i < endSlot; i++)
         {
-            width += Vector3.Distance(allSlots[i].transform.position, allSlots[i + 1].transform.position);
+            Transform currentAnchor = GetSlotAnchor(i);
+            Transform nextAnchor = GetSlotAnchor(i + 1);
+            if (currentAnchor == null || nextAnchor == null)
+            {
+                continue;
+            }
+
+            width += Vector3.Distance(currentAnchor.position, nextAnchor.position);
         }
 
         if (width <= 0.001f)
@@ -357,8 +401,20 @@ public class RouletteInitializer : MonoBehaviour
         int previous = Mathf.Max(0, slotIndex - 1);
         int next = Mathf.Min(allSlots.Count - 1, slotIndex + 1);
 
-        float previousDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[previous].transform.position);
-        float nextDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[next].transform.position);
+        Transform currentAnchor = GetSlotAnchor(slotIndex);
+        Transform previousAnchor = GetSlotAnchor(previous);
+        Transform nextAnchor = GetSlotAnchor(next);
+        if (currentAnchor == null)
+        {
+            return 0.2f;
+        }
+
+        float previousDistance = previousAnchor != null
+            ? Vector3.Distance(currentAnchor.position, previousAnchor.position)
+            : 0f;
+        float nextDistance = nextAnchor != null
+            ? Vector3.Distance(currentAnchor.position, nextAnchor.position)
+            : 0f;
 
         float estimated = 0f;
         if (slotIndex > 0)
@@ -377,6 +433,22 @@ public class RouletteInitializer : MonoBehaviour
         }
 
         return Mathf.Max(estimated, 0.2f);
+    }
+
+    private Transform GetSlotAnchor(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= allSlots.Count)
+        {
+            return null;
+        }
+
+        if (slotSpawnAnchors != null && slotIndex < slotSpawnAnchors.Count && slotSpawnAnchors[slotIndex] != null)
+        {
+            return slotSpawnAnchors[slotIndex];
+        }
+
+        Slot slot = allSlots[slotIndex];
+        return slot != null ? slot.transform : null;
     }
 
     private static BaseSector ResolveSectorComponent(GameObject sectorObject)
@@ -398,9 +470,12 @@ public class RouletteInitializer : MonoBehaviour
         }
 
         slotPlaceholderVisuals.Clear();
+        slotPlaceholderBaseColors.Clear();
         for (int i = 0; i < allSlots.Count; i++)
         {
-            slotPlaceholderVisuals.Add(allSlots[i] != null ? allSlots[i].visual : null);
+            Renderer renderer = allSlots[i] != null ? allSlots[i].visual : null;
+            slotPlaceholderVisuals.Add(renderer);
+            slotPlaceholderBaseColors.Add(GetRendererColor(renderer));
         }
     }
 
@@ -440,7 +515,96 @@ public class RouletteInitializer : MonoBehaviour
 
             slot.sector = null;
             slot.visual = i < slotPlaceholderVisuals.Count ? slotPlaceholderVisuals[i] : null;
+            RestoreSlotPlaceholderColor(i);
             SetGraySlotVisible(i, true);
+        }
+    }
+
+    private bool HasRenderableGeometry(Renderer renderer)
+    {
+        if (renderer == null)
+        {
+            return false;
+        }
+
+        MeshRenderer meshRenderer = renderer as MeshRenderer;
+        if (meshRenderer != null)
+        {
+            MeshFilter filter = meshRenderer.GetComponent<MeshFilter>();
+            return filter != null && filter.sharedMesh != null;
+        }
+
+        SkinnedMeshRenderer skinnedRenderer = renderer as SkinnedMeshRenderer;
+        if (skinnedRenderer != null)
+        {
+            return skinnedRenderer.sharedMesh != null;
+        }
+
+        SpriteRenderer spriteRenderer = renderer as SpriteRenderer;
+        if (spriteRenderer != null)
+        {
+            return spriteRenderer.sprite != null;
+        }
+
+        return true;
+    }
+
+    private void ApplySlotPlaceholderColor(int slotIndex, SectorType sectorType)
+    {
+        if (slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count)
+        {
+            return;
+        }
+
+        Renderer renderer = slotPlaceholderVisuals[slotIndex];
+        if (renderer == null || renderer.material == null || !renderer.material.HasProperty("_Color"))
+        {
+            return;
+        }
+
+        renderer.material.color = GetSectorTint(sectorType);
+    }
+
+    private void RestoreSlotPlaceholderColor(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count || slotIndex >= slotPlaceholderBaseColors.Count)
+        {
+            return;
+        }
+
+        Renderer renderer = slotPlaceholderVisuals[slotIndex];
+        if (renderer == null || renderer.material == null || !renderer.material.HasProperty("_Color"))
+        {
+            return;
+        }
+
+        renderer.material.color = slotPlaceholderBaseColors[slotIndex];
+    }
+
+    private Color GetRendererColor(Renderer renderer)
+    {
+        if (renderer == null || renderer.sharedMaterial == null || !renderer.sharedMaterial.HasProperty("_Color"))
+        {
+            return Color.white;
+        }
+
+        return renderer.sharedMaterial.color;
+    }
+
+    private Color GetSectorTint(SectorType sectorType)
+    {
+        switch (sectorType)
+        {
+            case SectorType.Attack:
+                return new Color(0.95f, 0.35f, 0.35f, 1f);
+            case SectorType.Shield:
+                return new Color(0.35f, 0.85f, 1f, 1f);
+            case SectorType.Heal:
+                return new Color(0.35f, 1f, 0.45f, 1f);
+            case SectorType.Money:
+                return new Color(1f, 0.85f, 0.2f, 1f);
+            default:
+                return Color.white;
         }
     }
 
