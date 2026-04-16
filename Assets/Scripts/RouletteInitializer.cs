@@ -15,11 +15,15 @@ public class RouletteInitializer : MonoBehaviour
     public float sectorScaleMultiplier = 1f;
     public bool autoFitSectorWidth = false;
     public float tangentialScaleMultiplier = 1f;
+    [Tooltip("If enabled, sectors are positioned by slot anchors so active sectors visually replace gray placeholders.")]
+    public bool useSlotAnchorsForSpawn = true;
     public bool placeAtWheelCenter = true;
     public Transform wheelCenter;
     public Transform spawnedSectorsParent;
     public Vector3 sectorPositionOffset;
     public bool hideGraySlots = true;
+    [Tooltip("Optional transforms that explicitly define each slot position/rotation. If empty, Slot transforms are used.")]
+    public List<Transform> slotSpawnAnchors = new();
 
     private readonly List<BaseSector> activeSectors = new();
     private List<int> slotToSectorMap = new();
@@ -194,7 +198,7 @@ public class RouletteInitializer : MonoBehaviour
 
     private Vector3 CalculateSectorPosition(int startSlot, int endSlot)
     {
-        if (placeAtWheelCenter)
+        if (!useSlotAnchorsForSpawn && placeAtWheelCenter)
         {
             return wheelCenter != null ? wheelCenter.position : transform.position;
         }
@@ -204,13 +208,13 @@ public class RouletteInitializer : MonoBehaviour
 
         for (int i = startSlot; i <= endSlot; i++)
         {
-            Slot slot = allSlots[i];
-            if (slot == null)
+            Transform anchor = GetSlotAnchor(i);
+            if (anchor == null)
             {
                 continue;
             }
 
-            accumulated += slot.transform.position;
+            accumulated += anchor.position;
             count++;
         }
 
@@ -235,8 +239,8 @@ public class RouletteInitializer : MonoBehaviour
             int leftIndex = Mathf.Clamp(Mathf.FloorToInt(slotCenterIndex), 0, allSlots.Count - 1);
             int rightIndex = Mathf.Clamp(Mathf.CeilToInt(slotCenterIndex), 0, allSlots.Count - 1);
 
-            Slot leftSlot = allSlots[leftIndex];
-            Slot rightSlot = allSlots[rightIndex];
+            Transform leftSlot = GetSlotAnchor(leftIndex);
+            Transform rightSlot = GetSlotAnchor(rightIndex);
 
             if (leftSlot != null || rightSlot != null)
             {
@@ -336,7 +340,14 @@ public class RouletteInitializer : MonoBehaviour
         float width = 0f;
         for (int i = startSlot; i < endSlot; i++)
         {
-            width += Vector3.Distance(allSlots[i].transform.position, allSlots[i + 1].transform.position);
+            Transform currentAnchor = GetSlotAnchor(i);
+            Transform nextAnchor = GetSlotAnchor(i + 1);
+            if (currentAnchor == null || nextAnchor == null)
+            {
+                continue;
+            }
+
+            width += Vector3.Distance(currentAnchor.position, nextAnchor.position);
         }
 
         if (width <= 0.001f)
@@ -357,8 +368,20 @@ public class RouletteInitializer : MonoBehaviour
         int previous = Mathf.Max(0, slotIndex - 1);
         int next = Mathf.Min(allSlots.Count - 1, slotIndex + 1);
 
-        float previousDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[previous].transform.position);
-        float nextDistance = Vector3.Distance(allSlots[slotIndex].transform.position, allSlots[next].transform.position);
+        Transform currentAnchor = GetSlotAnchor(slotIndex);
+        Transform previousAnchor = GetSlotAnchor(previous);
+        Transform nextAnchor = GetSlotAnchor(next);
+        if (currentAnchor == null)
+        {
+            return 0.2f;
+        }
+
+        float previousDistance = previousAnchor != null
+            ? Vector3.Distance(currentAnchor.position, previousAnchor.position)
+            : 0f;
+        float nextDistance = nextAnchor != null
+            ? Vector3.Distance(currentAnchor.position, nextAnchor.position)
+            : 0f;
 
         float estimated = 0f;
         if (slotIndex > 0)
@@ -377,6 +400,22 @@ public class RouletteInitializer : MonoBehaviour
         }
 
         return Mathf.Max(estimated, 0.2f);
+    }
+
+    private Transform GetSlotAnchor(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= allSlots.Count)
+        {
+            return null;
+        }
+
+        if (slotSpawnAnchors != null && slotIndex < slotSpawnAnchors.Count && slotSpawnAnchors[slotIndex] != null)
+        {
+            return slotSpawnAnchors[slotIndex];
+        }
+
+        Slot slot = allSlots[slotIndex];
+        return slot != null ? slot.transform : null;
     }
 
     private static BaseSector ResolveSectorComponent(GameObject sectorObject)
