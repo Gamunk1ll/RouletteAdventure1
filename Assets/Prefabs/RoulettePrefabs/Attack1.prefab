@@ -42,7 +42,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6189366498761042820}
-  m_Mesh: {fileID: 9215711850693173046, guid: 69067d1d7a742184a8afc33d5813f7cd, type: 3}
+  m_Mesh: {fileID: 9215711850693173046, guid: 465cd05267e68c44fae9b567b2b0f259, type: 3}
 --- !u!23 &4005326584699235523
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -121,5 +121,3 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShopWorldOffer
   titleText: {fileID: 0}
   priceText: {fileID: 0}
-  legacyTitleText: {fileID: 0}
-  legacyPriceText: {fileID: 0}

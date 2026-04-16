@@ -32,7 +32,41 @@ public class RouletteInitializer : MonoBehaviour
 
     private void Start()
     {
+        AutoFixLegacyCenterSpawnMode();
         InitializeRoulette();
+    }
+
+    private void AutoFixLegacyCenterSpawnMode()
+    {
+        if (useSlotAnchorsForSpawn || !placeAtWheelCenter)
+        {
+            return;
+        }
+
+        if (allSlots == null || allSlots.Count < 2)
+        {
+            return;
+        }
+
+        bool hasDistinctSlotPositions = false;
+        Vector3 firstPos = allSlots[0] != null ? allSlots[0].transform.position : Vector3.zero;
+        for (int i = 1; i < allSlots.Count; i++)
+        {
+            Slot slot = allSlots[i];
+            if (slot != null && Vector3.Distance(firstPos, slot.transform.position) > 0.001f)
+            {
+                hasDistinctSlotPositions = true;
+                break;
+            }
+        }
+
+        if (!hasDistinctSlotPositions)
+        {
+            return;
+        }
+
+        useSlotAnchorsForSpawn = true;
+        Debug.LogWarning("RouletteInitializer: detected legacy center-spawn configuration. Auto-enabled useSlotAnchorsForSpawn to prevent stacked sectors.");
     }
 
     public void InitializeRoulette()

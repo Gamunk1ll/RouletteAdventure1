@@ -3993,11 +3993,13 @@ MonoBehaviour:
   sectorScaleMultiplier: 0.33
   autoFitSectorWidth: 0
   tangentialScaleMultiplier: 1
-  placeAtWheelCenter: 1
+  useSlotAnchorsForSpawn: 1
+  placeAtWheelCenter: 0
   wheelCenter: {fileID: 1930433387}
   spawnedSectorsParent: {fileID: 1958504762}
   sectorPositionOffset: {x: 0, y: 0, z: 0}
-  hideGraySlots: 0
+  hideGraySlots: 1
+  slotSpawnAnchors: []
 --- !u!4 &1554135356
 Transform:
   m_ObjectHideFlags: 0
