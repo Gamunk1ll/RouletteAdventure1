@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 1490794490431304682}
   - component: {fileID: 6288826805103378872}
   - component: {fileID: 5399774522533751749}
-  - component: {fileID: 385851836860507930}
   m_Layer: 0
   m_Name: Money3
   m_TagString: Untagged
@@ -92,17 +91,3 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &385851836860507930
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5479495025958593596}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a32cc6b173c4e14ebcfc5296a2380e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaseSector
-  data: {fileID: 11400000, guid: 1884d1c70c81b6742ab67f6768156d3a, type: 2}
-  visualRotationOffsetZ: 0

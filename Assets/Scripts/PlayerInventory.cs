@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.UI;
+
 public class PlayerInventory : MonoBehaviour
 {
     [System.Serializable]
@@ -11,145 +11,150 @@ public class PlayerInventory : MonoBehaviour
     }
 
     public static PlayerInventory Instance;
+
+    [Header("Логика инвентаря")]
     public List<InventoryItem> inventory = new List<InventoryItem>();
     public List<SectorData> ownedBalls = new List<SectorData>();
     public int MaxInventorySize = 5;
-    public Transform inventoryContainer;
-    public GameObject inventorySlotPrefab;
+
+    [Header("Настройки продажи")]
     [Range(0f, 1f)] public float sellMultiplier = 0.75f;
+
+    [Header("3D Ссылки")]
+    public Transform inventoryParent;
 
     private void Awake()
     {
-        if(Instance == null)
-            Instance = this;
-        else
-            Destroy (gameObject);
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
-    void Start()
+
+    // Полное добавление с визуалом
+    public bool AddSector(SectorData sector, int boughtPrice)
     {
-        UpdateInventoryUI();    
-    }
-    public bool AddSector(SectorData sector, int boughtPrice) 
-    {
-        if (sector == null)
-            return false;
-
-        if (sector.shopItemKind == ShopItemKind.Ball)
-            return false;
-
-        if (inventory.Count >= MaxInventorySize) 
-        {
-            Debug.Log("inventory full");
-            return false;
-        }
-
-        inventory.Add(new InventoryItem
-        {
-            sector = sector,
-            boughtPrice = Mathf.Max(0, boughtPrice)
-        });
-        UpdateInventoryUI();
+        if (!CanAdd(sector)) return false;
+        inventory.Add(new InventoryItem { sector = sector, boughtPrice = Mathf.Max(0, boughtPrice) });
+        SyncVisuals();
         return true;
     }
+
+    // Добавление только в список БЕЗ визуала
+    // Используется когда визуал уже создан через PlaceSectorSimple (покупка из магазина)
+    public bool AddSectorSilent(SectorData sector, int boughtPrice)
+    {
+        if (!CanAdd(sector)) return false;
+        inventory.Add(new InventoryItem { sector = sector, boughtPrice = Mathf.Max(0, boughtPrice) });
+        // Не вызываем SyncVisuals — визуал уже создан снаружи
+        return true;
+    }
+
+    private bool CanAdd(SectorData sector)
+    {
+        if (sector == null || sector.shopItemKind == ShopItemKind.Ball) return false;
+        if (inventory.Count >= MaxInventorySize)
+        {
+            Debug.Log("Inventory full");
+            return false;
+        }
+        return true;
+    }
+
     public bool AddBall(SectorData ballItem)
     {
-        if (ballItem == null || ballItem.shopItemKind != ShopItemKind.Ball)
-            return false;
-
+        if (ballItem == null || ballItem.shopItemKind != ShopItemKind.Ball) return false;
         ownedBalls.Add(ballItem);
         return true;
     }
-    public void RemoveSector(int index) 
+
+    public void RemoveSector(int index)
     {
-        if (index >= 0 && index < inventory.Count) 
+        if (index >= 0 && index < inventory.Count)
         {
             inventory.RemoveAt(index);
-            UpdateInventoryUI();
+            SyncVisuals();
         }
     }
-    public SectorData GetSector(int index) 
+
+    // Удаляет по SectorData — используется при переносе из инвентаря на рулетку
+    public void RemoveSectorByData(SectorData sector)
     {
-        if(index >= 0 && index < inventory.Count)
-            return inventory[index].sector;
-        return null;
+        int index = inventory.FindIndex(item => item.sector == sector);
+        if (index >= 0)
+        {
+            inventory.RemoveAt(index);
+            // Не вызываем SyncVisuals — визуал уже удалён через RemoveSector на слоте
+        }
     }
+
+    public SectorData GetSector(int index)
+    {
+        return (index >= 0 && index < inventory.Count) ? inventory[index].sector : null;
+    }
+
     public int GetSellPrice(int index)
     {
-        if (index < 0 || index >= inventory.Count)
-            return 0;
-
+        if (index < 0 || index >= inventory.Count) return 0;
         int baseSell = Mathf.RoundToInt(inventory[index].boughtPrice * sellMultiplier);
         if (baseSell <= 0 && inventory[index].sector != null)
             baseSell = Mathf.Max(0, inventory[index].sector.sellPrice);
-
         return baseSell;
     }
-    public int SellSector(int index) 
-    {
-        if (GameManager.Instance == null || GameManager.Instance.state != BattleState.Shop)
-            return 0;
 
-        if (index >= 0 && index < inventory.Count) 
-        {
-            int price = GetSellPrice(index);
-            inventory.RemoveAt(index);
-            UpdateInventoryUI();
-            Player player = FindObjectOfType<Player>();
-            if (player!=null)
-            {
-                player.AddMoney(price);
-            }
-            return price;
-        }
-        return 0;
-    }
-    public void UpdateInventoryUI() 
+    public int SellSector(int index)
     {
-        if (inventoryContainer == null)
-            return;
-        foreach(Transform child in inventoryContainer) 
-        {
-            Destroy(child.gameObject);
-        }
-        for (int i = 0; i < inventory.Count; i++) 
-        {
-            GameObject slot = Instantiate(inventorySlotPrefab, inventoryContainer);
-            Image image = slot.GetComponent<Image>();
-            if (image !=null && inventory[i].sector != null && inventory[i].sector.icon !=null)
-            {
-                image.sprite = inventory[i].sector.icon;
-            }
-            Text priceText = slot.GetComponentInChildren<Text>();
-            if (priceText != null) 
-            {
-                priceText.text = $"${GetSellPrice(i)}";
-            }
-            Button button = slot.GetComponent<Button>();
-            if(button != null) 
-            {
-                int index = i;
-                button.onClick.AddListener(() =>OnInventorySlotClick(index));
-            }
-        }
-    }
-    void OnInventorySlotClick(int index) 
-    {
-        if (GameManager.Instance != null && GameManager.Instance.state == BattleState.Shop)
-        {
-            SellSector(index);
-            return;
-        }
+        if (GameManager.Instance == null || GameManager.Instance.state != BattleState.Shop) return 0;
+        if (index < 0 || index >= inventory.Count) return 0;
 
-        SectorSelector selector = FindObjectOfType<SectorSelector>();
-        if (selector != null)
-        {
-            selector.SelectFromInventory(index);
-        }
+        int price = GetSellPrice(index);
+        inventory.RemoveAt(index);
+        SyncVisuals();
+
+        Player player = FindObjectOfType<Player>();
+        player?.AddMoney(price);
+        return price;
     }
+
     public void ClearInventory()
     {
         inventory.Clear();
         ownedBalls.Clear();
-        UpdateInventoryUI();
+        SyncVisuals();
+    }
+
+    // Возвращает количество занятых слотов (логически)
+    public int GetUsedSlotCount() => inventory.Count;
+
+    public bool IsFull() => inventory.Count >= MaxInventorySize;
+
+    private void SyncVisuals()
+    {
+        if (inventoryParent == null) return;
+
+        InventorySlot[] slots = inventoryParent.GetComponentsInChildren<InventorySlot>();
+        System.Array.Sort(slots, (x, y) => x.slotIndex.CompareTo(y.slotIndex));
+
+        RouletteInitializer roulette = FindObjectOfType<RouletteInitializer>();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (i >= inventory.Count)
+            {
+                if (slots[i].isOccupied) slots[i].RemoveSector();
+                continue;
+            }
+
+            var item = inventory[i];
+            if (slots[i].isOccupied && slots[i].sectorData == item.sector)
+                continue;
+
+            if (slots[i].isOccupied)
+                slots[i].RemoveSector();
+
+            if (item.sector != null)
+            {
+                Material mat = roulette?.GetMaterialForType(item.sector.Type);
+                slots[i].PlaceSectorSimple(mat, Color.white, item.sector, -1);
+            }
+        }
     }
 }

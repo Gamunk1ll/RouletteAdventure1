@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 5006390883298908319}
   - component: {fileID: 4661734048812960562}
   - component: {fileID: 4005326584699235523}
-  - component: {fileID: -422436574416820177}
   - component: {fileID: -754958279717695078}
   m_Layer: 0
   m_Name: Attack1
@@ -93,20 +92,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &-422436574416820177
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6189366498761042820}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a32cc6b173c4e14ebcfc5296a2380e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaseSector
-  data: {fileID: 11400000, guid: 13506379920f8a04ab536ef9c28346e2, type: 2}
-  visualRotationOffsetZ: 0
 --- !u!114 &-754958279717695078
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,5 +104,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de2337f8ee154be88fdc921a8d996d5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShopWorldOffer
-  titleText: {fileID: 0}
-  priceText: {fileID: 0}

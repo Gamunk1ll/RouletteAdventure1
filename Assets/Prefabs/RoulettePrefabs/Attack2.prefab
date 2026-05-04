@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8431890658758731978}
   - component: {fileID: 5444543917472935046}
   - component: {fileID: 7030786318004835303}
-  - component: {fileID: -405545002974248957}
   m_Layer: 0
   m_Name: Attack2
   m_TagString: Untagged
@@ -92,17 +91,3 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &-405545002974248957
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1004681936141328176}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a32cc6b173c4e14ebcfc5296a2380e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaseSector
-  data: {fileID: 11400000, guid: 61a32e21fb6f7164a8023dee9a46d1de, type: 2}
-  visualRotationOffsetZ: 0

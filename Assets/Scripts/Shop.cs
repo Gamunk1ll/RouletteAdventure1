@@ -1,390 +1,181 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Shop : MonoBehaviour
 {
-    [Serializable]
-    public class ShopSlot
-    {
-        public Button buyButton;
-        public TMP_Text titleText;
-        public TMP_Text priceText;
-        public Image iconImage;
-        public Text legacyTitleText;
-        public Text legacyPriceText;
-
-        [HideInInspector] public SectorData assignedSector;
-    }
-
+    [Header("Товары")]
     public SectorData[] possibleItems;
-    public ShopSlot[] slots;
+    public bool uniqueOffers = true;
 
-    [Min(1)] public int offersPerRoll = 6;
-    public bool uniqueOffers = false;
+    [Header("Точки спавна товаров на сцене")]
+    public Transform[] worldSpawnPoints;
+    public Transform worldItemsParent;
 
-    public TMP_Text moneyText;
-    public TMP_Text hintText;
-    public Button rerollButton;
+    [Header("Настройки спавна товаров")]
+    public float spawnHeightOffset = 0.3f;
+    //  Поле itemRotation удалено — поворот больше не используется
+
+    [Header("Настройки цен")]
     public int rerollPrice = 10;
     [Min(0)] public int rerollPriceGrowthPerWave = 2;
     [Min(0)] public int rerollPriceGrowthPerRoll = 3;
     [Min(0f)] public float wavePriceGrowth = 0.12f;
-    [Min(0)] public int ballPurchaseAmount = 1;
-    public Text legacyMoneyText;
-    public Text legacyHintText;
 
-    public Transform[] worldSpawnPoints;
-    public Transform worldItemsParent;
+    [Header("Объекты только для фазы магазина")]
     public GameObject[] shopPhaseObjects;
 
-    private readonly List<GameObject> spawnedWorldItems = new();
     private readonly List<SectorData> currentOffers = new();
+    private readonly List<GameObject> spawnedItems = new();
     private Player player;
-    private int rerollsThisShopStage;
-
-    private void Awake()
-    {
-        if (slots == null)
-            slots = Array.Empty<ShopSlot>();
-
-        if (worldSpawnPoints == null)
-            worldSpawnPoints = Array.Empty<Transform>();
-
-        if (rerollButton != null)
-        {
-            rerollButton.onClick.RemoveListener(RerollShop);
-            rerollButton.onClick.AddListener(RerollShop);
-        }
-
-        for (int i = 0; i < slots.Length; i++)
-        {
-            int index = i;
-            if (slots[i].buyButton == null) continue;
-            slots[i].buyButton.onClick.RemoveAllListeners();
-            slots[i].buyButton.onClick.AddListener(() => TryBuy(index));
-        }
-    }
-
-    private void Update()
-    {
-        if (player == null)
-        {
-            if (GameManager.Instance != null)
-                player = GameManager.Instance.player;
-            else
-                player = FindObjectOfType<Player>();
-        }
-
-        UpdateMoneyText();
-        UpdateButtonsState();
-    }
+    private int rerollsThisShop;
 
     public void Open()
     {
-        if (player == null)
-            player = GameManager.Instance != null ? GameManager.Instance.player : FindObjectOfType<Player>();
-
-        rerollsThisShopStage = 0;
-        ToggleShopPhaseObjects(true);
+        player = GameManager.Instance?.player ?? FindObjectOfType<Player>();
+        rerollsThisShop = 0;
+        ToggleShopObjects(true);
         RollItems();
     }
 
     public void Close()
     {
-        ClearWorldItems();
-        ToggleShopPhaseObjects(false);
+        ClearSpawnedItems();
+        ToggleShopObjects(false);
     }
 
     public void RollItems()
     {
-        if (possibleItems == null || possibleItems.Length == 0)
-            return;
+        if (possibleItems == null || possibleItems.Length == 0) return;
 
-        int activeOffers = GetActiveOfferCount();
+        ClearSpawnedItems();
         currentOffers.Clear();
-        for (int i = 0; i < activeOffers; i++)
-            currentOffers.Add(null);
 
-        bool useUniqueOffers = uniqueOffers || possibleItems.Length >= activeOffers;
-        if (useUniqueOffers)
-        {
-            List<SectorData> pool = new List<SectorData>(possibleItems);
-            Shuffle(pool);
+        int count = Mathf.Min(worldSpawnPoints.Length, possibleItems.Length);
+        List<SectorData> pool = new List<SectorData>(possibleItems);
+        Shuffle(pool);
 
-            for (int i = 0; i < activeOffers; i++)
-            {
-                SectorData item = pool[i % pool.Count];
-                SetOffer(i, item);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < activeOffers; i++)
-            {
-                SectorData item = possibleItems[UnityEngine.Random.Range(0, possibleItems.Length)];
-                SetOffer(i, item);
-            }
-        }
+        for (int i = 0; i < count; i++)
+            currentOffers.Add(pool[i % pool.Count]);
 
-        for (int i = activeOffers; i < slots.Length; i++)
-            BindItemToSlot(i, null);
-
-        RespawnWorldItems();
-        UpdateButtonsState();
+        SpawnWorldItems();
     }
 
-    public void RerollShop()
+    public void Reroll()
     {
-        if (player == null)
-            return;
-
-        int currentRerollPrice = GetCurrentRerollPrice();
-        if (player.GetMoney() < currentRerollPrice)
-        {
-            return;
-        }
-
-        player.AddMoney(-currentRerollPrice);
-        rerollsThisShopStage++;
+        if (player == null) return;
+        int price = GetRerollPrice();
+        if (player.GetMoney() < price) return;
+        player.AddMoney(-price);
+        rerollsThisShop++;
         RollItems();
     }
 
-    public void TryBuy(int slotIndex)
+    public bool TryBuy(int offerIndex)
     {
-        if (!IsOfferIndexValid(slotIndex))
-            return;
+        if (offerIndex < 0 || offerIndex >= currentOffers.Count) return false;
 
-        SectorData selectedItem = currentOffers[slotIndex];
-        if (selectedItem == null || player == null)
-            return;
+        SectorData item = currentOffers[offerIndex];
+        if (item == null || player == null) return false;
 
-        int price = GetBuyPrice(selectedItem);
-        if (player.GetMoney() < price)
-        {
-            SetHint($"Need {price}$");
-            return;
-        }
+        int price = GetBuyPrice(item);
+        if (player.GetMoney() < price) return false;
 
-        PlayerInventory inventory = PlayerInventory.Instance;
-        if (inventory == null)
-        {
-            SetHint("PlayerInventory not found");
-            return;
-        }
+        PlayerInventory inv = PlayerInventory.Instance;
+        if (inv == null) return false;
 
         bool added;
-        if (selectedItem.shopItemKind == ShopItemKind.Ball)
-        {
-            added = inventory.AddBall(selectedItem);
-            BallManager ballManager = FindObjectOfType<BallManager>();
-            if (added && ballManager != null)
-                ballManager.AddBalls(Mathf.Max(1, ballPurchaseAmount));
-        }
+        if (item.shopItemKind == ShopItemKind.Ball)
+            added = inv.AddBall(item);
         else
-        {
-            added = inventory.AddSector(selectedItem, price);
-        }
+            added = inv.AddSectorSilent(item, price);
 
-        if (!added)
-        {
-            SetHint(selectedItem.shopItemKind == ShopItemKind.Ball
-                ? "Cannot buy this ball"
-                : "Inventory full");
-            return;
-        }
+        if (!added) return false;
 
         player.AddMoney(-price);
-        SetHint($"Bought: {selectedItem.name}");
+        currentOffers[offerIndex] = null;
 
-        SetOffer(slotIndex, null);
-        ClearWorldItem(slotIndex);
-        UpdateButtonsState();
-    }
-
-    private void SetOffer(int index, SectorData item)
-    {
-        if (!IsOfferIndexValid(index))
-            return;
-
-        currentOffers[index] = item;
-        BindItemToSlot(index, item);
-    }
-
-    private void BindItemToSlot(int index, SectorData item)
-    {
-        if (index < 0 || index >= slots.Length)
-            return;
-
-        ShopSlot slot = slots[index];
-        slot.assignedSector = item;
-
-        if (item == null)
+        if (offerIndex < spawnedItems.Count && spawnedItems[offerIndex] != null)
         {
-            SetLabel(slot.titleText, slot.legacyTitleText, "SOLD");
-            SetLabel(slot.priceText, slot.legacyPriceText, "-");
-            if (slot.iconImage != null) slot.iconImage.sprite = null;
-            return;
+            Destroy(spawnedItems[offerIndex]);
+            spawnedItems[offerIndex] = null;
         }
 
-        SetLabel(slot.titleText, slot.legacyTitleText, item.name);
-        SetLabel(slot.priceText, slot.legacyPriceText, $"${GetBuyPrice(item)}");
-        if (slot.iconImage != null) slot.iconImage.sprite = item.icon;
+        return true;
     }
 
-    private void RespawnWorldItems()
+    private void SpawnWorldItems()
     {
-        ClearWorldItems();
-
-        if (worldSpawnPoints == null || worldSpawnPoints.Length == 0)
-            return;
-
-        int activeOffers = GetActiveOfferCount();
-
-        for (int i = 0; i < activeOffers; i++)
+        for (int i = 0; i < currentOffers.Count; i++)
         {
-            spawnedWorldItems.Add(null);
-
-            if (i >= worldSpawnPoints.Length)
-                continue;
-
-            Transform spawnPoint = worldSpawnPoints[i];
-            if (spawnPoint == null || currentOffers[i] == null)
-                continue;
+            spawnedItems.Add(null);
 
             SectorData item = currentOffers[i];
-            GameObject visualPrefab = ResolveShopVisualPrefab(item);
-            if (visualPrefab == null)
-                continue;
+            if (item == null) continue;
 
-            GameObject itemView = Instantiate(visualPrefab);
-            itemView.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+            if (i >= worldSpawnPoints.Length || worldSpawnPoints[i] == null) continue;
 
+            GameObject prefab = item.shopVisualPrefab != null
+                ? item.shopVisualPrefab
+                : item.visualPrefab;
+            if (prefab == null) continue;
+
+            // Создаём пустой контейнер
+            GameObject obj = new GameObject($"ShopItem_{i}");
+
+            // Сначала назначаем родителя (worldPositionStays = false)
             if (worldItemsParent != null)
-                itemView.transform.SetParent(worldItemsParent, true);
+                obj.transform.SetParent(worldItemsParent, false);
 
-            if (itemView.GetComponent<Collider>() == null)
-                itemView.AddComponent<BoxCollider>();
+            // Выставляем только мировую позицию (поворот убран)
+            obj.transform.position = worldSpawnPoints[i].position + Vector3.up * spawnHeightOffset;
+            //  Строка obj.transform.rotation = Quaternion.Euler(itemRotation); удалена
 
-            ShopWorldOffer offer = itemView.GetComponent<ShopWorldOffer>();
-            if (offer == null)
-                offer = itemView.AddComponent<ShopWorldOffer>();
+            // Меш с оригинальным масштабом префаба
+            GameObject visual = Instantiate(prefab, obj.transform);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = prefab.transform.localScale;
 
+            // Коллайдер под масштаб префаба (~200 единиц)
+            BoxCollider col = obj.AddComponent<BoxCollider>();
+            col.size = Vector3.one * 200f;
+
+            ShopWorldOffer offer = obj.AddComponent<ShopWorldOffer>();
             offer.Setup(this, i, item, GetBuyPrice(item));
-            spawnedWorldItems[i] = itemView;
+
+            spawnedItems[i] = obj;
         }
     }
 
-    private static GameObject ResolveShopVisualPrefab(SectorData item)
+    private void ClearSpawnedItems()
     {
-        if (item == null)
-            return null;
-
-        if (item.shopVisualPrefab != null)
-            return item.shopVisualPrefab;
-
-        return item.visualPrefab;
+        foreach (var obj in spawnedItems)
+            if (obj != null) Destroy(obj);
+        spawnedItems.Clear();
     }
 
-    private void ClearWorldItems()
+    public int GetBuyPrice(SectorData item)
     {
-        for (int i = 0; i < spawnedWorldItems.Count; i++)
-        {
-            if (spawnedWorldItems[i] != null)
-                Destroy(spawnedWorldItems[i]);
-        }
-
-        spawnedWorldItems.Clear();
+        if (item == null) return 0;
+        int wave = Mathf.Max(1, GameManager.Instance?.currentWave ?? 1);
+        float mult = 1f + (wave - 1) * wavePriceGrowth;
+        return Mathf.Max(0, Mathf.RoundToInt(item.buyPrice * mult));
     }
 
-    private void ClearWorldItem(int slotIndex)
+    public int GetRerollPrice()
     {
-        if (slotIndex < 0 || slotIndex >= spawnedWorldItems.Count)
-            return;
-
-        if (spawnedWorldItems[slotIndex] != null)
-            Destroy(spawnedWorldItems[slotIndex]);
-
-        spawnedWorldItems[slotIndex] = null;
+        int wave = Mathf.Max(1, GameManager.Instance?.currentWave ?? 1);
+        return rerollPrice
+            + (wave - 1) * rerollPriceGrowthPerWave
+            + rerollsThisShop * rerollPriceGrowthPerRoll;
     }
 
-    private void UpdateButtonsState()
+    private void ToggleShopObjects(bool active)
     {
-        int currentMoney = player != null ? player.GetMoney() : 0;
-        PlayerInventory inventory = PlayerInventory.Instance;
-
-        int activeOffers = GetActiveOfferCount();
-        for (int i = 0; i < slots.Length; i++)
-        {
-            if (slots[i].buyButton == null)
-                continue;
-
-            SectorData item = i < activeOffers && i < currentOffers.Count ? currentOffers[i] : null;
-            bool hasItem = item != null;
-            bool enoughMoney = hasItem && currentMoney >= GetBuyPrice(item);
-            bool hasSlotSpace = true;
-
-            if (hasItem &&
-                item.shopItemKind != ShopItemKind.Ball &&
-                inventory != null)
-            {
-                hasSlotSpace = inventory.inventory.Count < inventory.MaxInventorySize;
-            }
-
-            bool canBuy = hasItem && enoughMoney && hasSlotSpace;
-
-            slots[i].buyButton.interactable = canBuy;
-        }
-
-        if (rerollButton != null)
-            rerollButton.interactable = player != null && currentMoney >= GetCurrentRerollPrice();
-    }
-
-    private void UpdateMoneyText()
-    {
-        int value = player != null ? player.GetMoney() : 0;
-        string text = $"${value}";
-
-        SetLabel(moneyText, legacyMoneyText, text);
-    }
-
-    private void SetHint(string text)
-    {
-        SetLabel(hintText, legacyHintText, text);
-        Debug.Log($"[Shop] {text}");
-    }
-
-    private int GetBuyPrice(SectorData item)
-    {
-        if (item == null)
-            return 0;
-
-        int wave = 1;
-        if (GameManager.Instance != null)
-            wave = Mathf.Max(1, GameManager.Instance.currentWave);
-
-        float multiplier = 1f + (wave - 1) * wavePriceGrowth;
-        return Mathf.Max(0, Mathf.RoundToInt(item.buyPrice * multiplier));
-    }
-
-    private int GetCurrentRerollPrice()
-    {
-        int wave = 1;
-        if (GameManager.Instance != null)
-            wave = Mathf.Max(1, GameManager.Instance.currentWave);
-
-        return rerollPrice + (wave - 1) * rerollPriceGrowthPerWave + rerollsThisShopStage * rerollPriceGrowthPerRoll;
-    }
-
-    private static void SetLabel(TMP_Text tmpText, Text legacyText, string value)
-    {
-        if (tmpText != null)
-            tmpText.text = value;
-
-        if (legacyText != null)
-            legacyText.text = value;
+        if (shopPhaseObjects == null) return;
+        foreach (var obj in shopPhaseObjects)
+            if (obj != null) obj.SetActive(active);
     }
 
     private static void Shuffle<T>(List<T> list)
@@ -393,33 +184,6 @@ public class Shop : MonoBehaviour
         {
             int j = UnityEngine.Random.Range(0, i + 1);
             (list[i], list[j]) = (list[j], list[i]);
-        }
-    }
-
-    private bool IsOfferIndexValid(int index)
-    {
-        return index >= 0 && index < currentOffers.Count;
-    }
-
-    private int GetActiveOfferCount()
-    {
-        int pointsCount = worldSpawnPoints.Length;
-        int maxBySlotsOrPoints = Mathf.Max(slots.Length, pointsCount);
-        if (maxBySlotsOrPoints <= 0)
-            maxBySlotsOrPoints = offersPerRoll;
-
-        return Mathf.Min(offersPerRoll, maxBySlotsOrPoints);
-    }
-
-    private void ToggleShopPhaseObjects(bool active)
-    {
-        if (shopPhaseObjects == null)
-            return;
-
-        for (int i = 0; i < shopPhaseObjects.Length; i++)
-        {
-            if (shopPhaseObjects[i] != null)
-                shopPhaseObjects[i].SetActive(active);
         }
     }
 }

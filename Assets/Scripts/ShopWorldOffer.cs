@@ -1,65 +1,110 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class ShopWorldOffer : MonoBehaviour
 {
-    public TMP_Text titleText;
-    public TMP_Text priceText;
     private Shop shop;
-    private int slotIndex;
-    private int displayedPrice;
+    private int offerIndex;
+    private SectorData sectorData;
+    private int price;
 
-    public void Setup(Shop owner, int index, SectorData sector, int price)
+    private Camera mainCamera;
+    private bool isDragging = false;
+    private GameObject dragVisual;
+    private Vector3 originalPosition;
+    private Renderer[] renderers;
+
+    public void Setup(Shop owner, int index, SectorData sector, int buyPrice)
     {
         shop = owner;
-        slotIndex = index;
-        displayedPrice = Mathf.Max(0, price);
-        ApplyLabels(sector);
+        offerIndex = index;
+        sectorData = sector;
+        price = buyPrice;
+        originalPosition = transform.position;
+        mainCamera = Camera.main;
+        renderers = GetComponentsInChildren<Renderer>(true);
     }
 
     private void OnMouseDown()
     {
-        if (shop == null)
-            return;
+        if (GameManager.Instance?.state != BattleState.Shop) return;
 
-        if (GameManager.Instance == null || GameManager.Instance.state != BattleState.Shop)
-            return;
+        isDragging = true;
 
-        shop.TryBuy(slotIndex);
+        // Создаём копию для перетаскивания
+        dragVisual = Instantiate(gameObject, transform.position, transform.rotation);
+        Destroy(dragVisual.GetComponent<ShopWorldOffer>());
+        foreach (var col in dragVisual.GetComponents<Collider>())
+            Destroy(col);
+
+        // Скрываем оригинал
+        SetRenderersEnabled(false);
     }
 
-    private void ApplyLabels(SectorData sector)
+    private void OnMouseDrag()
     {
-        if (sector == null)
-            return;
+        if (!isDragging || dragVisual == null || mainCamera == null) return;
 
-        if (titleText == null || priceText == null)
-            TryAutoAssignTmpLabels();
-
-        string title = sector.name;
-        string price = $"${displayedPrice}";
-
-        if (titleText != null)
-            titleText.text = title;
-
-        if (priceText != null)
-            priceText.text = price;
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        Plane plane = new Plane(Vector3.up, new Vector3(0f, originalPosition.y, 0f));
+        if (plane.Raycast(ray, out float dist))
+            dragVisual.transform.position = ray.GetPoint(dist);
     }
 
-    private void TryAutoAssignTmpLabels()
+    private void OnMouseUp()
     {
-        TMP_Text[] labels = GetComponentsInChildren<TMP_Text>(true);
-        if (labels.Length == 1)
+        if (!isDragging) return;
+        isDragging = false;
+
+        if (dragVisual != null) { Destroy(dragVisual); dragVisual = null; }
+
+        // Попали в слот инвентаря?
+        InventorySlot invSlot = GetUnderMouse<InventorySlot>();
+        if (invSlot != null && invSlot.CanAcceptSector())
         {
-            priceText = labels[0];
-            return;
+            bool bought = shop.TryBuy(offerIndex);
+            if (bought)
+            {
+                RouletteInitializer roulette = FindObjectOfType<RouletteInitializer>();
+                Material mat = roulette?.GetMaterialForType(sectorData.Type);
+                int prefabIndex = FindPrefabIndex(roulette, sectorData);
+
+                // Кладём в инвентарь — один слот, один предмет
+                invSlot.PlaceSectorSimple(mat, Color.white, sectorData, prefabIndex);
+                Destroy(gameObject);
+                return;
+            }
         }
 
-        if (labels.Length >= 2)
+        // Промахнулись или не хватило денег — возвращаем на место
+        SetRenderersEnabled(true);
+    }
+
+    private void SetRenderersEnabled(bool on)
+    {
+        if (renderers == null) return;
+        foreach (var r in renderers)
+            if (r != null) r.enabled = on;
+    }
+
+    private T GetUnderMouse<T>() where T : Component
+    {
+        if (mainCamera == null) return null;
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+            return hit.collider.GetComponent<T>();
+        return null;
+    }
+
+    private static int FindPrefabIndex(RouletteInitializer roulette, SectorData data)
+    {
+        if (roulette == null || data == null) return -1;
+        for (int i = 0; i < roulette.sectorPrefabs.Count; i++)
         {
-            titleText = labels[0];
-            priceText = labels[1];
+            if (roulette.sectorPrefabs[i] == null) continue;
+            var sector = roulette.sectorPrefabs[i].GetComponent<BaseSector>()
+                      ?? roulette.sectorPrefabs[i].GetComponentInChildren<BaseSector>(true);
+            if (sector?.data == data) return i;
         }
+        return -1;
     }
 }

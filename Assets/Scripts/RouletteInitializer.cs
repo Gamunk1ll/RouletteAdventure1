@@ -3,658 +3,343 @@ using UnityEngine;
 
 public class RouletteInitializer : MonoBehaviour
 {
-    public List<Slot> allSlots = new();
-    public List<GameObject> sectorPrefabs = new();
-    public List<int> startingConfiguration = new();
-    public float sectorRotationOffset;
-    public float referenceSectorAngleZ = 180.5f;
-    public int referenceStartSlot = 0;
-    public int referenceSectorSize = 2;
-    public bool rotateClockwise = true;
-    public bool useSlotBasedRotation = true;
-    public float sectorScaleMultiplier = 1f;
-    public bool autoFitSectorWidth = false;
-    public float tangentialScaleMultiplier = 1f;
-    public bool useSlotAnchorsForSpawn = true;
-    public bool placeAtWheelCenter = true;
-    public Transform wheelCenter;
-    public Transform spawnedSectorsParent;
-    public Vector3 sectorPositionOffset;
-    public bool hideGraySlots = true;
-    public List<Transform> slotSpawnAnchors = new();
+    [Header("Circle-объекты из Blender (по порядку слотов)")]
+    public List<MeshRenderer> slotRenderers = new();
 
-    private readonly List<BaseSector> activeSectors = new();
-    private List<int> slotToSectorMap = new();
-    private readonly List<Renderer> slotPlaceholderVisuals = new();
-    private readonly List<Color> slotPlaceholderBaseColors = new();
+    [Header("Префабы секторов")]
+    public List<GameObject> sectorPrefabs = new();
+
+    [Header("Стартовая конфигурация (один индекс = один сектор)")]
+    public List<int> startingConfiguration = new();
+
+    [Header("Логические слоты")]
+    public List<Slot> allSlots = new();
+
+    [Header("Спавн префабов на рулетке")]
+    public Transform wheelSpinTransform;   
+    public Transform spawnedSectorsParent;   
+    public float sectorRotationOffset = 0f;  
+    public float sectorScaleMultiplier = 1f;
+
+    [Header("Материалы (для пустых слотов)")]
+    public Material emptyMaterial;
+    public Material attackMaterial;
+    public Material moneyMaterial;
+    public Material shieldMaterial;
+    public Material healMaterial;
+
+    public int[] slotAssignment;
+
+    private readonly Dictionary<int, GameObject> spawnedSectorObjects = new();
 
     private void Start()
     {
-        AutoFixLegacyCenterSpawnMode();
-        InitializeRoulette();
+        BuildFromConfiguration(startingConfiguration);
+        SetupSlotColliders();
     }
 
-    private void AutoFixLegacyCenterSpawnMode()
+
+
+    public void BuildFromConfiguration(List<int> config)
     {
-        if (useSlotAnchorsForSpawn || !placeAtWheelCenter)
-        {
-            return;
-        }
+        ClearAllSpawnedSectors();
 
-        if (allSlots == null || allSlots.Count < 2)
-        {
-            return;
-        }
+        slotAssignment = new int[slotRenderers.Count];
+        for (int i = 0; i < slotAssignment.Length; i++)
+            slotAssignment[i] = -1;
 
-        bool hasDistinctSlotPositions = false;
-        Vector3 firstPos = allSlots[0] != null ? allSlots[0].transform.position : Vector3.zero;
-        for (int i = 1; i < allSlots.Count; i++)
-        {
-            Slot slot = allSlots[i];
-            if (slot != null && Vector3.Distance(firstPos, slot.transform.position) > 0.001f)
-            {
-                hasDistinctSlotPositions = true;
-                break;
-            }
-        }
-
-        if (!hasDistinctSlotPositions)
-        {
-            return;
-        }
-
-        useSlotAnchorsForSpawn = true;
-    }
-
-    public void InitializeRoulette()
-    {
-        CaptureSlotPlaceholders();
-        ClearRoulette();
-
-        if (allSlots == null || allSlots.Count == 0)
-        {
-            return;
-        }
-
-        slotToSectorMap = new List<int>(new int[allSlots.Count]);
-        for (int i = 0; i < slotToSectorMap.Count; i++)
-        {
-            slotToSectorMap[i] = -1;
-        }
+        foreach (var slot in allSlots)
+            if (slot != null) slot.sector = null;
 
         int currentSlot = 0;
-
-        for (int i = 0; i < startingConfiguration.Count && currentSlot < allSlots.Count; i++)
+        foreach (int prefabIndex in config)
         {
-            int prefabIndex = startingConfiguration[i];
-
+            if (currentSlot >= slotRenderers.Count) break;
             if (prefabIndex < 0 || prefabIndex >= sectorPrefabs.Count)
             {
+                currentSlot++;
                 continue;
             }
 
-            GameObject prefab = sectorPrefabs[prefabIndex];
-            BaseSector prefabSector = ResolveSectorComponent(prefab);
+            int size = GetSectorSize(prefabIndex);
+            if (currentSlot + size > slotRenderers.Count) break;
 
-            if (prefabSector == null || prefabSector.data == null)
-            {
-                continue;
-            }
-
-            int sectorSize = Mathf.Max(1, prefabSector.data.size);
-            if (currentSlot + sectorSize > allSlots.Count)
-            {
-                continue;
-            }
-
-            BaseSector spawnedSector = SpawnSector(currentSlot, sectorSize, prefab);
-            if (spawnedSector == null)
-            {
-                continue;
-            }
-
-            int sectorIndex = activeSectors.Count - 1;
-            for (int s = 0; s < sectorSize; s++)
-            {
-                slotToSectorMap[currentSlot + s] = sectorIndex;
-            }
-
-            currentSlot += sectorSize;
+            PlaceSector(currentSlot, prefabIndex, size);
+            currentSlot += size;
         }
+
+        RefreshEmptySlots();
     }
 
-    private BaseSector SpawnSector(int startSlot, int size, GameObject prefab)
+    private void PlaceSector(int startSlot, int prefabIndex, int size)
     {
-        int endSlot = startSlot + size - 1;
-        Slot startSlotObj = allSlots[startSlot];
-        Slot endSlotObj = allSlots[endSlot];
+        if (prefabIndex < 0 || prefabIndex >= sectorPrefabs.Count) return;
+        if (startSlot + size > slotRenderers.Count) return;
 
-        if (startSlotObj == null || endSlotObj == null)
-        {
-            return null;
-        }
-
-        Transform parent = ResolveSpawnParent(startSlotObj);
-        Vector3 sectorPosition = CalculateSectorPosition(startSlot, endSlot) + sectorPositionOffset;
-        BaseSector prefabSector = ResolveSectorComponent(prefab);
-
-        GameObject sectorObj = Instantiate(prefab, parent, false);
-        sectorObj.transform.localPosition = parent != null
-            ? parent.InverseTransformPoint(sectorPosition)
-            : sectorPosition;
-
-        BaseSector sector = ResolveSectorComponent(sectorObj);
-        if (sector == null)
-        {
-            Destroy(sectorObj);
-            return null;
-        }
-
-        bool appliedValidOverrideVisual = false;
-        if (sector.data != null && sector.data.rouletteVisualPrefab != null)
-        {
-            GameObject overrideVisual = Instantiate(sector.data.rouletteVisualPrefab, sectorObj.transform, false);
-            overrideVisual.name = $"{sector.data.rouletteVisualPrefab.name}_Visual";
-            overrideVisual.transform.localPosition = Vector3.zero;
-            overrideVisual.transform.localRotation = Quaternion.identity;
-            overrideVisual.transform.localScale = Vector3.one;
-
-            Renderer[] overrideRendererArray = overrideVisual.GetComponentsInChildren<Renderer>(true);
-            bool hasValidOverrideRenderer = false;
-            for (int i = 0; i < overrideRendererArray.Length; i++)
-            {
-                if (HasRenderableGeometry(overrideRendererArray[i]))
-                {
-                    hasValidOverrideRenderer = true;
-                    break;
-                }
-            }
-
-            if (hasValidOverrideRenderer)
-            {
-                HashSet<Renderer> overrideRenderers = new HashSet<Renderer>(overrideRendererArray);
-                Renderer[] allRenderers = sectorObj.GetComponentsInChildren<Renderer>(true);
-
-                for (int i = 0; i < allRenderers.Length; i++)
-                {
-                    Renderer renderer = allRenderers[i];
-                    if (renderer != null && !overrideRenderers.Contains(renderer))
-                        renderer.enabled = false;
-                }
-
-                appliedValidOverrideVisual = true;
-            }
-            else
-            {
-                Destroy(overrideVisual);
-            }
-        }
-
-        Quaternion computedSectorRotation = CalculateSectorLocalRotation(
-            startSlot,
-            size,
-            prefabSector,
-            parent
-        );
-
-        sectorObj.transform.localRotation = computedSectorRotation;
-        FitSectorScaleToSlots(sectorObj.transform, startSlot, endSlot);
-
-        Renderer[] allSectorRenderers = sectorObj.GetComponentsInChildren<Renderer>(true);
-        List<Renderer> visibleRenderers = new List<Renderer>(allSectorRenderers.Length);
-        for (int i = 0; i < allSectorRenderers.Length; i++)
-        {
-            if (allSectorRenderers[i] != null && allSectorRenderers[i].enabled && HasRenderableGeometry(allSectorRenderers[i]))
-                visibleRenderers.Add(allSectorRenderers[i]);
-        }
-
-        if (visibleRenderers.Count == 0 && appliedValidOverrideVisual)
-        {
-            string sectorName = sector.data != null ? sector.data.name : sector.name;
-        }
-
-        Renderer[] slotRenderers = visibleRenderers.ToArray();
-        Renderer sectorRenderer = slotRenderers.Length > 0 ? slotRenderers[0] : null;
-        bool usingPerSlotVisuals = slotRenderers.Length >= size;
-        bool fallbackToSlotPlaceholder = sectorRenderer == null;
-
-        for (int i = startSlot; i <= endSlot; i++)
-        {
-            allSlots[i].sector = sector;
-            allSlots[i].index = i;
-            if (fallbackToSlotPlaceholder)
-            {
-                Renderer placeholder = i < slotPlaceholderVisuals.Count ? slotPlaceholderVisuals[i] : null;
-                allSlots[i].visual = placeholder;
-                SetGraySlotVisible(i, true);
-                ApplySlotPlaceholderColor(i, sector.data != null ? sector.data.Type : SectorType.Attack);
-            }
-            else
-            {
-                allSlots[i].visual = usingPerSlotVisuals
-                    ? slotRenderers[i - startSlot]
-                    : sectorRenderer;
-                SetGraySlotVisible(i, false);
-                RestoreSlotPlaceholderColor(i);
-            }
-        }
-
-        activeSectors.Add(sectorObj.GetComponent<BaseSector>() ?? sector);
-        return sector;
-    }
-
-    private Transform ResolveSpawnParent(Slot startSlot)
-    {
-        if (spawnedSectorsParent != null)
-        {
-            return spawnedSectorsParent;
-        }
-
-        if (startSlot != null && startSlot.transform.parent != null)
-        {
-            return startSlot.transform.parent;
-        }
-
-        return transform;
-    }
-
-    private Vector3 CalculateSectorPosition(int startSlot, int endSlot)
-    {
-        if (!useSlotAnchorsForSpawn && placeAtWheelCenter)
-        {
-            return wheelCenter != null ? wheelCenter.position : transform.position;
-        }
-
-        Vector3 accumulated = Vector3.zero;
+        // Средняя мировая позиция занимаемых слотов
+        Vector3 worldPos = Vector3.zero;
         int count = 0;
-
-        for (int i = startSlot; i <= endSlot; i++)
+        for (int i = startSlot; i < startSlot + size; i++)
         {
-            Transform anchor = GetSlotAnchor(i);
-            if (anchor == null)
+            if (slotRenderers[i] != null)
             {
-                continue;
-            }
-
-            accumulated += anchor.position;
-            count++;
-        }
-
-        if (count == 0)
-        {
-            return transform.position;
-        }
-
-        return accumulated / count;
-    }
-
-    private Quaternion CalculateSectorLocalRotation(int startSlot, int size, BaseSector prefabSector, Transform parent)
-    {
-        if (allSlots == null || allSlots.Count == 0)
-        {
-            return prefabSector != null ? prefabSector.transform.localRotation : Quaternion.identity;
-        }
-
-        if (useSlotBasedRotation)
-        {
-            float slotCenterIndex = startSlot + (size - 1) * 0.5f;
-            int leftIndex = Mathf.Clamp(Mathf.FloorToInt(slotCenterIndex), 0, allSlots.Count - 1);
-            int rightIndex = Mathf.Clamp(Mathf.CeilToInt(slotCenterIndex), 0, allSlots.Count - 1);
-
-            Transform leftSlot = GetSlotAnchor(leftIndex);
-            Transform rightSlot = GetSlotAnchor(rightIndex);
-
-            if (leftSlot != null || rightSlot != null)
-            {
-                float slotVisualOffsetZ = prefabSector != null ? prefabSector.visualRotationOffsetZ : 0f;
-                Vector3 slotPrefabEuler = prefabSector != null
-                    ? prefabSector.transform.localEulerAngles
-                    : Vector3.zero;
-
-                Quaternion leftRotation = leftSlot != null ? leftSlot.transform.rotation : rightSlot.transform.rotation;
-                Quaternion rightRotation = rightSlot != null ? rightSlot.transform.rotation : leftRotation;
-                float blend = Mathf.Clamp01(slotCenterIndex - leftIndex);
-
-                Quaternion worldRotation = Quaternion.Slerp(leftRotation, rightRotation, blend) * Quaternion.Euler(0f, 0f, slotVisualOffsetZ);
-                Quaternion localRotation = parent != null
-                    ? Quaternion.Inverse(parent.rotation) * worldRotation
-                    : worldRotation;
-
-                Vector3 localEuler = localRotation.eulerAngles;
-                return Quaternion.Euler(slotPrefabEuler.x, slotPrefabEuler.y, localEuler.z + sectorRotationOffset);
+                // Используем центр bounds меша, а не transform.position
+              worldPos += slotRenderers[i].bounds.center;
+                count++;
             }
         }
+        if (count == 0) return;
+        worldPos /= count;
 
-        float anglePerSlot = 360f / allSlots.Count;
-        float centerIndex = startSlot + (size - 1) * 0.5f;
-        float referenceCenterIndex = referenceStartSlot + (Mathf.Max(1, referenceSectorSize) - 1) * 0.5f;
-        float direction = rotateClockwise ? -1f : 1f;
-        float visualOffsetZ = prefabSector != null ? prefabSector.visualRotationOffsetZ : 0f;
-        Vector3 prefabEuler = prefabSector != null
-            ? prefabSector.transform.localEulerAngles
-            : Vector3.zero;
+        // Вычисляем поворот от центра колеса к позиции сектора
+        Quaternion worldRotation = CalculateSectorRotation(worldPos);
 
-        float zAngle =
-            referenceSectorAngleZ +
-            (centerIndex - referenceCenterIndex) * anglePerSlot * direction +
-            sectorRotationOffset +
-            visualOffsetZ;
+        // Определяем какой префаб спавнить
+        GameObject prefab = sectorPrefabs[prefabIndex];
+        BaseSector prefabSector = ResolveSector(prefab);
+        GameObject visualPrefabToUse = prefab;
 
-        return Quaternion.Euler(prefabEuler.x, prefabEuler.y, zAngle);
-    }
+        if (prefabSector?.data?.rouletteVisualPrefab != null)
+            visualPrefabToUse = prefabSector.data.rouletteVisualPrefab;
 
-    private void FitSectorScaleToSlots(Transform sectorTransform, int startSlot, int endSlot)
-    {
-        if (sectorTransform == null)
+        // Спавним префаб
+        Transform parent = spawnedSectorsParent != null ? spawnedSectorsParent : transform;
+        GameObject obj = Instantiate(visualPrefabToUse, parent);
+        obj.transform.position = worldPos;
+        obj.transform.rotation = worldRotation;
+        obj.transform.localScale = visualPrefabToUse.transform.localScale * sectorScaleMultiplier;
+
+        // Записываем логику
+        BaseSector sector = ResolveSector(obj);
+        for (int i = startSlot; i < startSlot + size; i++)
         {
-            return;
-        }
-
-        Vector3 scale = sectorTransform.localScale;
-        float radialScale = Mathf.Max(0.01f, sectorScaleMultiplier);
-
-        Renderer renderer = sectorTransform.GetComponentInChildren<Renderer>(true);
-        if (renderer == null)
-        {
-            sectorTransform.localScale = scale * radialScale;
-            return;
-        }
-
-        if (!autoFitSectorWidth)
-        {
-            sectorTransform.localScale = scale * radialScale;
-            return;
-        }
-
-        float visualWidth = GetRendererWorldWidth(renderer, sectorTransform.right);
-        float targetWidth = CalculateTargetArcWidth(startSlot, endSlot);
-        float tangentialScale = Mathf.Max(0.01f, tangentialScaleMultiplier);
-
-        float widthScale = targetWidth / visualWidth;
-        sectorTransform.localScale = new Vector3(
-            scale.x * widthScale * radialScale * tangentialScale,
-            scale.y * radialScale,
-            scale.z * radialScale
-        );
-    }
-
-    private float GetRendererWorldWidth(Renderer renderer, Vector3 widthAxis)
-    {
-        Bounds bounds = renderer.bounds;
-        Vector3 axis = widthAxis.sqrMagnitude > 0.0001f ? widthAxis.normalized : Vector3.right;
-
-        Vector3 ext = bounds.extents;
-        float projectedHalfWidth =
-            Mathf.Abs(axis.x) * ext.x +
-            Mathf.Abs(axis.y) * ext.y +
-            Mathf.Abs(axis.z) * ext.z;
-
-        return Mathf.Max(projectedHalfWidth * 2f, 0.001f);
-    }
-
-    private float CalculateTargetArcWidth(int startSlot, int endSlot)
-    {
-        if (allSlots == null || allSlots.Count == 0)
-        {
-            return 0.2f;
-        }
-
-        float width = 0f;
-        for (int i = startSlot; i < endSlot; i++)
-        {
-            Transform currentAnchor = GetSlotAnchor(i);
-            Transform nextAnchor = GetSlotAnchor(i + 1);
-            if (currentAnchor == null || nextAnchor == null)
+            slotAssignment[i] = prefabIndex;
+            if (i < allSlots.Count && allSlots[i] != null)
             {
-                continue;
+                allSlots[i].sector = sector;
+                allSlots[i].index = i;
             }
-
-            width += Vector3.Distance(currentAnchor.position, nextAnchor.position);
+            // Скрываем Circle-меш под префабом
+            if (slotRenderers[i] != null)
+                slotRenderers[i].enabled = false;
         }
-
-        if (width <= 0.001f)
-        {
-            width = EstimateSingleSlotWidth(startSlot);
-        }
-
-        return Mathf.Max(width, 0.2f);
+        Debug.Log($"Sector {prefabIndex} startSlot={startSlot} worldPos={worldPos} | Circle bounds={slotRenderers[startSlot].bounds.center}");
+        spawnedSectorObjects[startSlot] = obj;
     }
 
-    private float EstimateSingleSlotWidth(int slotIndex)
+   private Quaternion CalculateSectorRotation(Vector3 worldPos)
+{
+    Transform center = wheelSpinTransform != null ? wheelSpinTransform : transform;
+
+    // Направление от центра к сектору
+    Vector3 toSector = worldPos - center.position;
+
+    // Нормаль плоскости рулетки = локальная ось Y объекта WheelSpin
+    Vector3 wheelNormal = center.up;
+
+    // Проецируем направление на плоскость рулетки
+    Vector3 projected = Vector3.ProjectOnPlane(toSector, wheelNormal).normalized;
+
+    if (projected.sqrMagnitude < 0.0001f)
+        return center.rotation;
+
+    // Сектор смотрит узкой частью К центру — forward = от центра к сектору
+    // up = нормаль плоскости рулетки
+    Quaternion rot = Quaternion.LookRotation(projected, wheelNormal);
+
+    // Применяем offset
+    return rot * Quaternion.Euler(0f, sectorRotationOffset, 0f);
+}
+
+
+    public (int start, int end) GetSectorRange(int slotIndex)
     {
-        if (allSlots == null || allSlots.Count < 2)
-        {
-            return 0.2f;
-        }
+        if (slotIndex < 0 || slotIndex >= slotAssignment.Length)
+            return (-1, -1);
 
-        int previous = Mathf.Max(0, slotIndex - 1);
-        int next = Mathf.Min(allSlots.Count - 1, slotIndex + 1);
+        int prefabIndex = slotAssignment[slotIndex];
+        if (prefabIndex < 0) return (-1, -1);
 
-        Transform currentAnchor = GetSlotAnchor(slotIndex);
-        Transform previousAnchor = GetSlotAnchor(previous);
-        Transform nextAnchor = GetSlotAnchor(next);
-        if (currentAnchor == null)
-        {
-            return 0.2f;
-        }
+        int size = GetSectorSize(prefabIndex);
 
-        float previousDistance = previousAnchor != null
-            ? Vector3.Distance(currentAnchor.position, previousAnchor.position)
-            : 0f;
-        float nextDistance = nextAnchor != null
-            ? Vector3.Distance(currentAnchor.position, nextAnchor.position)
-            : 0f;
+        int start = slotIndex;
+        while (start > 0
+               && slotAssignment[start - 1] == prefabIndex
+               && (slotIndex - (start - 1)) < size)
+            start--;
 
-        float estimated = 0f;
-        if (slotIndex > 0)
-        {
-            estimated += previousDistance;
-        }
+        int end = start + size - 1;
+        if (end >= slotAssignment.Length)
+            end = slotAssignment.Length - 1;
 
-        if (slotIndex < allSlots.Count - 1)
-        {
-            estimated += nextDistance;
-        }
-
-        if (slotIndex > 0 && slotIndex < allSlots.Count - 1)
-        {
-            estimated *= 0.5f;
-        }
-
-        return Mathf.Max(estimated, 0.2f);
+        return (start, end);
     }
 
-    private Transform GetSlotAnchor(int slotIndex)
+    public void RemoveWholeSector(int slotIndex)
     {
-        if (slotIndex < 0 || slotIndex >= allSlots.Count)
+        var (start, end) = GetSectorRange(slotIndex);
+        if (start < 0) return;
+        if (spawnedSectorObjects.TryGetValue(start, out GameObject obj))
         {
-            return null;
+            if (obj != null) Destroy(obj);
+            spawnedSectorObjects.Remove(start);
         }
 
-        if (slotSpawnAnchors != null && slotIndex < slotSpawnAnchors.Count && slotSpawnAnchors[slotIndex] != null)
+        for (int i = start; i <= end; i++)
         {
-            return slotSpawnAnchors[slotIndex];
-        }
-
-        Slot slot = allSlots[slotIndex];
-        return slot != null ? slot.transform : null;
-    }
-
-    private static BaseSector ResolveSectorComponent(GameObject sectorObject)
-    {
-        if (sectorObject == null)
-        {
-            return null;
-        }
-
-        BaseSector sector = sectorObject.GetComponent<BaseSector>();
-        return sector != null ? sector : sectorObject.GetComponentInChildren<BaseSector>(true);
-    }
-
-    private void CaptureSlotPlaceholders()
-    {
-        if (slotPlaceholderVisuals.Count == allSlots.Count && slotPlaceholderVisuals.Count > 0)
-        {
-            return;
-        }
-
-        slotPlaceholderVisuals.Clear();
-        slotPlaceholderBaseColors.Clear();
-        for (int i = 0; i < allSlots.Count; i++)
-        {
-            Renderer renderer = allSlots[i] != null ? allSlots[i].visual : null;
-            slotPlaceholderVisuals.Add(renderer);
-            slotPlaceholderBaseColors.Add(GetRendererColor(renderer));
-        }
-    }
-
-    private void SetGraySlotVisible(int slotIndex, bool visible)
-    {
-        if (!hideGraySlots || slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count)
-        {
-            return;
-        }
-
-        Renderer placeholder = slotPlaceholderVisuals[slotIndex];
-        if (placeholder != null)
-        {
-            placeholder.enabled = visible;
-        }
-    }
-
-    private void ClearRoulette()
-    {
-        foreach (BaseSector sector in activeSectors)
-        {
-            if (sector != null)
+            slotAssignment[i] = -1;
+            if (i < allSlots.Count && allSlots[i] != null)
+                allSlots[i].sector = null;
+            if (i < slotRenderers.Count && slotRenderers[i] != null)
             {
-                Destroy(sector.gameObject);
+                slotRenderers[i].enabled = true;
+                slotRenderers[i].material = emptyMaterial;
             }
         }
-
-        activeSectors.Clear();
-
-        for (int i = 0; i < allSlots.Count; i++)
-        {
-            Slot slot = allSlots[i];
-            if (slot == null)
-            {
-                continue;
-            }
-
-            slot.sector = null;
-            slot.visual = i < slotPlaceholderVisuals.Count ? slotPlaceholderVisuals[i] : null;
-            RestoreSlotPlaceholderColor(i);
-            SetGraySlotVisible(i, true);
-        }
     }
 
-    private bool HasRenderableGeometry(Renderer renderer)
+    public bool PlaceWholeSector(int startSlot, int prefabIndex)
     {
-        if (renderer == null)
-        {
-            return false;
-        }
+        int size = GetSectorSize(prefabIndex);
+        if (startSlot + size > slotAssignment.Length) return false;
 
-        MeshRenderer meshRenderer = renderer as MeshRenderer;
-        if (meshRenderer != null)
-        {
-            MeshFilter filter = meshRenderer.GetComponent<MeshFilter>();
-            return filter != null && filter.sharedMesh != null;
-        }
+        for (int i = startSlot; i < startSlot + size; i++)
+            if (slotAssignment[i] != -1) return false;
 
-        SkinnedMeshRenderer skinnedRenderer = renderer as SkinnedMeshRenderer;
-        if (skinnedRenderer != null)
-        {
-            return skinnedRenderer.sharedMesh != null;
-        }
-
-        SpriteRenderer spriteRenderer = renderer as SpriteRenderer;
-        if (spriteRenderer != null)
-        {
-            return spriteRenderer.sprite != null;
-        }
-
+        PlaceSector(startSlot, prefabIndex, size);
         return true;
     }
 
-    private void ApplySlotPlaceholderColor(int slotIndex, SectorType sectorType)
+    public void SwapWholeSectors(int slotA, int slotB)
     {
-        if (slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count)
+        int prefabA = GetPrefabIndexAtSlot(slotA);
+        int prefabB = GetPrefabIndexAtSlot(slotB);
+
+        var (startA, endA) = GetSectorRange(slotA);
+        var (startB, endB) = GetSectorRange(slotB);
+
+        if (startA < 0 || startB < 0) return;
+
+        if (Mathf.Max(startA, startB) < Mathf.Min(endA + 1, endB + 1))
         {
+            Debug.LogWarning("Сектора пересекаются!");
             return;
         }
 
-        Renderer renderer = slotPlaceholderVisuals[slotIndex];
-        if (renderer == null || renderer.material == null || !renderer.material.HasProperty("_Color"))
+        RemoveWholeSector(slotA);
+        RemoveWholeSector(slotB);
+
+        bool placedA = PlaceWholeSector(startA, prefabB);
+        bool placedB = PlaceWholeSector(startB, prefabA);
+
+        if (!placedA || !placedB)
         {
-            return;
-        }
-
-        renderer.material.color = GetSectorTint(sectorType);
-    }
-
-    private void RestoreSlotPlaceholderColor(int slotIndex)
-    {
-        if (slotIndex < 0 || slotIndex >= slotPlaceholderVisuals.Count || slotIndex >= slotPlaceholderBaseColors.Count)
-        {
-            return;
-        }
-
-        Renderer renderer = slotPlaceholderVisuals[slotIndex];
-        if (renderer == null || renderer.material == null || !renderer.material.HasProperty("_Color"))
-        {
-            return;
-        }
-
-        renderer.material.color = slotPlaceholderBaseColors[slotIndex];
-    }
-
-    private Color GetRendererColor(Renderer renderer)
-    {
-        if (renderer == null || renderer.sharedMaterial == null || !renderer.sharedMaterial.HasProperty("_Color"))
-        {
-            return Color.white;
-        }
-
-        return renderer.sharedMaterial.color;
-    }
-
-    private Color GetSectorTint(SectorType sectorType)
-    {
-        switch (sectorType)
-        {
-            case SectorType.Attack:
-                return new Color(0.95f, 0.35f, 0.35f, 1f);
-            case SectorType.Shield:
-                return new Color(0.35f, 0.85f, 1f, 1f);
-            case SectorType.Heal:
-                return new Color(0.35f, 1f, 0.45f, 1f);
-            case SectorType.Money:
-                return new Color(1f, 0.85f, 0.2f, 1f);
-            default:
-                return Color.white;
+            if (!placedA) PlaceWholeSector(startA, prefabA);
+            if (!placedB) PlaceWholeSector(startB, prefabB);
+            Debug.LogWarning("Не удалось поменять сектора местами");
         }
     }
 
-    public BaseSector GetSectorInSlot(int slotIndex)
+    private void SetupSlotColliders()
     {
-        if (slotIndex < 0 || slotIndex >= slotToSectorMap.Count)
+        for (int i = 0; i < slotRenderers.Count; i++)
         {
-            return null;
-        }
+            MeshRenderer r = slotRenderers[i];
+            if (r == null) continue;
 
-        int sectorIndex = slotToSectorMap[slotIndex];
-        if (sectorIndex < 0 || sectorIndex >= activeSectors.Count)
-        {
-            return null;
-        }
+            if (r.GetComponent<Collider>() == null)
+            {
+                MeshCollider col = r.gameObject.AddComponent<MeshCollider>();
+                col.sharedMesh = r.GetComponent<MeshFilter>()?.sharedMesh;
+            }
 
-        return activeSectors[sectorIndex];
+            RouletteSlotHandler handler = r.GetComponent<RouletteSlotHandler>();
+            if (handler == null)
+                handler = r.gameObject.AddComponent<RouletteSlotHandler>();
+
+            handler.slotIndex = i;
+            handler.initializer = this;
+        }
     }
 
-    public List<BaseSector> GetActiveSectors()
+
+    public void RefreshVisuals()
     {
-        return activeSectors;
+        RefreshEmptySlots();
+    }
+
+    private void RefreshEmptySlots()
+    {
+        for (int i = 0; i < slotRenderers.Count; i++)
+        {
+            if (slotRenderers[i] == null) continue;
+            int prefabIndex = i < slotAssignment.Length ? slotAssignment[i] : -1;
+
+            if (prefabIndex < 0)
+            {
+                slotRenderers[i].enabled = true;
+                slotRenderers[i].material = emptyMaterial;
+            }
+        }
+    }
+
+
+
+    public void RemoveSectorFromSlot(int slotIndex) => RemoveWholeSector(slotIndex);
+
+    public void PlaceSectorAtSlot(int slotIndex, int prefabIndex)
+    {
+        PlaceWholeSector(slotIndex, prefabIndex);
+    }
+
+    public int GetPrefabIndexAtSlot(int slotIndex)
+    {
+        if (slotAssignment == null || slotIndex < 0 || slotIndex >= slotAssignment.Length) return -1;
+        return slotAssignment[slotIndex];
+    }
+
+    public SectorData GetSectorDataAtSlot(int slotIndex)
+    {
+        int prefabIndex = GetPrefabIndexAtSlot(slotIndex);
+        if (prefabIndex < 0) return null;
+        return ResolveSector(sectorPrefabs[prefabIndex])?.data;
+    }
+
+    public Material GetMaterialForType(SectorType type)
+    {
+        switch (type)
+        {
+            case SectorType.Attack: return attackMaterial;
+            case SectorType.Money: return moneyMaterial;
+            case SectorType.Shield: return shieldMaterial;
+            case SectorType.Heal: return healMaterial;
+            default: return emptyMaterial;
+        }
+    }
+
+    public void HighlightSlot(int slotIndex, bool on) { }
+
+
+
+    private void ClearAllSpawnedSectors()
+    {
+        foreach (var kv in spawnedSectorObjects)
+            if (kv.Value != null) Destroy(kv.Value);
+        spawnedSectorObjects.Clear();
+        foreach (var r in slotRenderers)
+            if (r != null) r.enabled = true;
+    }
+
+    private int GetSectorSize(int prefabIndex)
+    {
+        if (prefabIndex < 0 || prefabIndex >= sectorPrefabs.Count) return 1;
+        BaseSector s = ResolveSector(sectorPrefabs[prefabIndex]);
+        return s?.data != null ? Mathf.Max(1, s.data.size) : 1;
+    }
+
+    private static BaseSector ResolveSector(GameObject obj)
+    {
+        if (obj == null) return null;
+        return obj.GetComponent<BaseSector>() ?? obj.GetComponentInChildren<BaseSector>(true);
     }
 }

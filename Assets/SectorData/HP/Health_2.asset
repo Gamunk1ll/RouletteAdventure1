@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9343da3c369ffaa42a684a3e33ec08e8, type: 3}
+  m_Name: Health_2
+  m_EditorClassIdentifier: Assembly-CSharp::SectorData
+  Type: 0
+  shopItemKind: 0
+  basePower: 4
+  size: 2
+  sellPrice: 0
+  buyPrice: 0
+  icon: {fileID: 0}
+  visualPrefab: {fileID: 0}
+  shopVisualPrefab: {fileID: 1745574106483566913, guid: 51a1b6a0fe1922943ab7bf1d4e172ca1, type: 3}
+  rouletteVisualPrefab: {fileID: 6455724906000408252, guid: 23dd1d7cabe78ae408f32551cac19301, type: 3}
+  visualRotationOffsetZ: 0
