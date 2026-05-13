@@ -1,11 +1,12 @@
+database is locked
 [Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-albnu" at "2026-05-13T11:02:49.298366Z"
 Built from '6000.3/staging' branch; Version is '6000.3.9f1 (7a9955a4f2fa) revision 8034645'; Using compiler version '194234433'; Build Type 'Release'
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-albnu" at "2026-05-04T19:52:30.2458151Z"
 OS: 'Windows 11  (10.0.26200) Core' Language: 'ru' Physical Memory: 32694 MB
 BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
 System  architecture: x64
 Process architecture: x64
-Date: 2026-05-04T19:52:30Z
+Date: 2026-05-13T11:02:49Z
 
 COMMAND LINE ARGUMENTS:
 C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Unity.exe
@@ -19,7 +20,7 @@ C:/Users/albnu/RouletteAdventure1
 -logFile
 Logs/AssetImportWorker1.log
 -srvPort
-64602
+63743
 -licensingIpc
 LicenseClient-albnu
 -job-worker-count
@@ -67,16 +68,16 @@ C:/Users/albnu/RouletteAdventure1
     "memorysetup-job-temp-allocator-block-size-background=1048576"
     "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
     "memorysetup-temp-allocator-size-cloud-worker=32768"
-Player connection [28912]  Target information:
+Player connection [27468]  Target information:
 
-Player connection [28912]  * "[IP] 192.168.0.100 [Port] 0 [Flags] 2 [Guid] 4067750537 [EditorId] 4067750537 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+Player connection [27468]  * "[IP] 192.168.0.100 [Port] 0 [Flags] 2 [Guid] 2329859835 [EditorId] 2329859835 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
 
-Player connection [28912]  * "[IP] 169.254.83.107 [Port] 0 [Flags] 2 [Guid] 4067750537 [EditorId] 4067750537 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+Player connection [27468]  * "[IP] 172.16.0.2 [Port] 0 [Flags] 2 [Guid] 2329859835 [EditorId] 2329859835 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
 
-Player connection [28912]  * "[IP] 172.16.0.2 [Port] 0 [Flags] 2 [Guid] 4067750537 [EditorId] 4067750537 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+Player connection [27468]  * "[IP] 169.254.83.107 [Port] 0 [Flags] 2 [Guid] 2329859835 [EditorId] 2329859835 [Version] 1048832 [Id] WindowsEditor(7,Albert) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
 
-Player connection [28912] Host joined multi-casting on [225.0.0.222:54997]...
-Player connection [28912] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Player connection [27468] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [27468] Host joined alternative multi-casting on [225.0.0.222:34997]...
 JobSystem: Creating JobQueue using job-worker-count value 5
 Input System module state changed to: Initialized.
 [Physics::Module] Initialized fallback backend.
@@ -104,44 +105,53 @@ Initialize mono
 Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.3.9f1/Editor/Data/Managed'
 Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.3.9f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
 Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.3.9f1/Editor/Data/MonoBleedingEdge/etc'
-Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56812
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56652
 Begin MonoManager ReloadAssembly
 Registering precompiled unity dll's ...
 Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.3.9f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
-Registered in 0.002205 seconds.
-- Loaded All Assemblies, in  0.514 seconds
+Registered in 0.002672 seconds.
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              4ce8d5cbb27c4199837ed67800695422
+  Correlation Id:          290921c73fac589cdc695fd754133ded
+  External correlation Id: 7179433374367615381
+  Machine Id:              kHeVHjg3X3pnaO0g2YI+HntF61E=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-albnu" (connect: 0.00s, validation: 0.00s, handshake: 1.01s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-albnu-notifications" at "2026-05-13T11:02:50.3146122Z"
+[Licensing::Module] Licensing Background thread has ended after 1.02s
+- Loaded All Assemblies, in  0.458 seconds
 Native extension for WindowsStandalone target not found
 ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.492 seconds
-Domain Reload Profiling: 1002ms
-	BeginReloadAssembly (143ms)
+- Finished resetting the current domain, in  0.572 seconds
+Domain Reload Profiling: 1027ms
+	BeginReloadAssembly (164ms)
 		ExecutionOrderSort (0ms)
 		DisableScriptedObjects (0ms)
 		BackupInstance (0ms)
 		ReleaseScriptingObjects (0ms)
 		CreateAndSetChildDomain (1ms)
-	RebuildCommonClasses (42ms)
-	RebuildNativeTypeToScriptingClass (18ms)
-	initialDomainReloadingComplete (116ms)
-	LoadAllAssembliesAndSetupDomain (190ms)
-		LoadAssemblies (139ms)
+	RebuildCommonClasses (48ms)
+	RebuildNativeTypeToScriptingClass (12ms)
+	initialDomainReloadingComplete (56ms)
+	LoadAllAssembliesAndSetupDomain (174ms)
+		LoadAssemblies (158ms)
 		RebuildTransferFunctionScriptingTraits (0ms)
-		AnalyzeDomain (186ms)
-			TypeCache.Refresh (185ms)
-				TypeCache.ScanAssembly (169ms)
+		AnalyzeDomain (169ms)
+			TypeCache.Refresh (168ms)
+				TypeCache.ScanAssembly (153ms)
 			BuildScriptInfoCaches (0ms)
-			ResolveRequiredComponents (1ms)
-	FinalizeReload (492ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (572ms)
 		ReleaseScriptCaches (0ms)
 		RebuildScriptCaches (0ms)
-		SetupLoadedEditorAssemblies (452ms)
+		SetupLoadedEditorAssemblies (527ms)
 			LogAssemblyErrors (0ms)
-			InitializePlatformSupportModulesInManaged (60ms)
-			SetLoadedEditorAssemblies (4ms)
-			BeforeProcessingInitializeOnLoad (101ms)
-			ProcessInitializeOnLoadAttributes (200ms)
-			ProcessInitializeOnLoadMethodAttributes (86ms)
+			InitializePlatformSupportModulesInManaged (110ms)
+			SetLoadedEditorAssemblies (9ms)
+			BeforeProcessingInitializeOnLoad (135ms)
+			ProcessInitializeOnLoadAttributes (191ms)
+			ProcessInitializeOnLoadMethodAttributes (82ms)
 			AfterProcessingInitializeOnLoad (0ms)
 			EditorAssembliesLoaded (0ms)
 		ExecutionOrderSort2 (0ms)
@@ -150,255 +160,63 @@ Domain Reload Profiling: 1002ms
 Worker process is ready to serve import requests
 Import Worker Mode flag is 0x00
 Begin MonoManager ReloadAssembly
-[Licensing::Module] Licensing is not yet initialized.
-[Licensing::Client] Handshaking with LicensingClient:
-  Version:                 1.17.4+4293ba1
-  Session Id:              f2cb336cc62c4c31841d3697c2786b9c
-  Correlation Id:          a674f7670b1c3d87340e71a8b19e36d3
-  External correlation Id: 9115811098638225371
-  Machine Id:              kHeVHjg3X3pnaO0g2YI+HntF61E=
-[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-albnu" (connect: 0.00s, validation: 0.00s, handshake: 2.16s)
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-albnu-notifications" at "2026-05-04T19:52:32.4097205Z"
-[Licensing::Module] Licensing Background thread has ended after 2.16s
-[Licensing::Module] Licensing is initialized (took 0.51s).
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Module] License group:
   Id: 10171472810478-UnityPersXXXX
   Product: Unity Personal
   Type: Assigned
   Expiration: Unlimited
-- Loaded All Assemblies, in  0.913 seconds
+- Loaded All Assemblies, in  0.561 seconds
 Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
 Native extension for WindowsStandalone target not found
 ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.405 seconds
-Domain Reload Profiling: 1315ms
-	BeginReloadAssembly (695ms)
+- Finished resetting the current domain, in  0.573 seconds
+Domain Reload Profiling: 1128ms
+	BeginReloadAssembly (232ms)
 		ExecutionOrderSort (0ms)
-		DisableScriptedObjects (5ms)
+		DisableScriptedObjects (8ms)
 		BackupInstance (0ms)
 		ReleaseScriptingObjects (0ms)
-		CreateAndSetChildDomain (35ms)
-	RebuildCommonClasses (35ms)
-	RebuildNativeTypeToScriptingClass (11ms)
-	initialDomainReloadingComplete (32ms)
-	LoadAllAssembliesAndSetupDomain (137ms)
-		LoadAssemblies (193ms)
+		CreateAndSetChildDomain (41ms)
+	RebuildCommonClasses (64ms)
+	RebuildNativeTypeToScriptingClass (25ms)
+	initialDomainReloadingComplete (40ms)
+	LoadAllAssembliesAndSetupDomain (194ms)
+		LoadAssemblies (272ms)
 		RebuildTransferFunctionScriptingTraits (0ms)
-		AnalyzeDomain (36ms)
-			TypeCache.Refresh (24ms)
-				TypeCache.ScanAssembly (15ms)
-			BuildScriptInfoCaches (8ms)
-			ResolveRequiredComponents (2ms)
-	FinalizeReload (405ms)
+		AnalyzeDomain (50ms)
+			TypeCache.Refresh (32ms)
+				TypeCache.ScanAssembly (22ms)
+			BuildScriptInfoCaches (13ms)
+			ResolveRequiredComponents (3ms)
+	FinalizeReload (573ms)
 		ReleaseScriptCaches (0ms)
 		RebuildScriptCaches (0ms)
-		SetupLoadedEditorAssemblies (284ms)
+		SetupLoadedEditorAssemblies (437ms)
 			LogAssemblyErrors (0ms)
-			InitializePlatformSupportModulesInManaged (1ms)
-			SetLoadedEditorAssemblies (3ms)
-			BeforeProcessingInitializeOnLoad (102ms)
-			ProcessInitializeOnLoadAttributes (132ms)
-			ProcessInitializeOnLoadMethodAttributes (36ms)
-			AfterProcessingInitializeOnLoad (9ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			SetLoadedEditorAssemblies (5ms)
+			BeforeProcessingInitializeOnLoad (171ms)
+			ProcessInitializeOnLoadAttributes (194ms)
+			ProcessInitializeOnLoadMethodAttributes (55ms)
+			AfterProcessingInitializeOnLoad (10ms)
 			EditorAssembliesLoaded (0ms)
 		ExecutionOrderSort2 (0ms)
-		AwakeInstancesAfterBackupRestoration (5ms)
-Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 seconds
+		AwakeInstancesAfterBackupRestoration (10ms)
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.02 seconds
 Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
 Preloading 0 native plugins for Editor in 0.00 ms.
 Unloading 12 Unused Serialized files (Serialized files now loaded: 0)
-Unloading 1018 unused Assets / (2.1 MB). Loaded Objects now: 1643.
-Memory consumption went from 78.4 MB to 76.3 MB.
-Total: 5.450400 ms (FindLiveObjects: 0.163800 ms CreateObjectMapping: 0.052400 ms MarkObjects: 4.645500 ms  DeleteObjects: 0.587900 ms)
+Unloading 1018 unused Assets / (2.2 MB). Loaded Objects now: 1643.
+Memory consumption went from 78.4 MB to 76.2 MB.
+Total: 7.452100 ms (FindLiveObjects: 0.292200 ms CreateObjectMapping: 0.054000 ms MarkObjects: 6.281600 ms  DeleteObjects: 0.822700 ms)
 
 ========================================================================
 Received Import Request.
-  Time since last request: 37629.383235 seconds.
-  path: Assets/BlenderModels/Helmet.blend11
-  artifactKey: Guid(e96c59fb6e3303f4da66dd7811a7d585) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/BlenderModels/Helmet.blend11 using Guid(e96c59fb6e3303f4da66dd7811a7d585) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'f584df6099f6210b1709e4cf144177db') in 0.0172089 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 1
+  Time since last request: 1936.504139 seconds.
+  path: Assets/RubikMonoOne-Regular SDF.asset
+  artifactKey: Guid(bf21e89cd56ad6f4a8249f68309169ef) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
+Start importing Assets/RubikMonoOne-Regular SDF.asset using Guid(bf21e89cd56ad6f4a8249f68309169ef) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '9a8130fc604a6d54749f74e663b798dc') in 0.7308655 seconds
+Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 5
 
-========================================================================
-Received Import Request.
-  Time since last request: 3540.877058 seconds.
-  path: Assets/Prefabs/test/AttackSector1.prefab
-  artifactKey: Guid(15a9723f911b0f0469c7ce0f2177a48b) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/AttackSector1.prefab using Guid(15a9723f911b0f0469c7ce0f2177a48b) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '690a239aa931190b3babe9b7e2ed5e85') in 0.1416357 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 76
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000028 seconds.
-  path: Assets/Prefabs/test/ShieldSector2.prefab
-  artifactKey: Guid(fd4a175e1f2315d4690f9141f4fb2a6e) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/ShieldSector2.prefab using Guid(fd4a175e1f2315d4690f9141f4fb2a6e) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '7080debc89a3ad4f7e0a87ef1676480a') in 0.0128014 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 76
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000026 seconds.
-  path: Assets/Prefabs/test/ShieldSector1.prefab
-  artifactKey: Guid(853ae1ef913921942868c8a64c5c53fd) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/ShieldSector1.prefab using Guid(853ae1ef913921942868c8a64c5c53fd) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '86e81c65c13899f23316eb4f82d3f43c') in 0.2390503 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 76
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000022 seconds.
-  path: Assets/Prefabs/test/MoneySector2.prefab
-  artifactKey: Guid(aac847f6295755a4c86d0fc95f8574e1) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/MoneySector2.prefab using Guid(aac847f6295755a4c86d0fc95f8574e1) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'eb8a5b9d6848626c75913029dd2d4635') in 0.0131078 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 76
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.555801 seconds.
-  path: Assets/Prefabs/test/MoneySector1.prefab
-  artifactKey: Guid(433cc834a41b0814a89e867f70dc02d4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/MoneySector1.prefab using Guid(433cc834a41b0814a89e867f70dc02d4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '194a3e6e51a6a0031c3a71b77599d183') in 0.1540167 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 11
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000020 seconds.
-  path: Assets/Prefabs/test/HealthSector2.prefab
-  artifactKey: Guid(23dd1d7cabe78ae408f32551cac19301) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/HealthSector2.prefab using Guid(23dd1d7cabe78ae408f32551cac19301) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '55d0dc2693dea239f05a74d64fd04e62') in 0.013937 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 11
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000031 seconds.
-  path: Assets/Prefabs/test/AttackSector1.prefab
-  artifactKey: Guid(15a9723f911b0f0469c7ce0f2177a48b) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/AttackSector1.prefab using Guid(15a9723f911b0f0469c7ce0f2177a48b) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: 'a99a0ff2baa655e34e6384a87cb615c8') in 0.014205 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 11
-
-========================================================================
-Received Import Request.
-  Time since last request: 10.471786 seconds.
-  path: Assets/SectorData/Attack/Attack_3.asset
-  artifactKey: Guid(8a8e19543ac467d4aae979a283063977) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/SectorData/Attack/Attack_3.asset using Guid(8a8e19543ac467d4aae979a283063977) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'ff85adf68c58be8d01c7ae0a2319cb9d') in 0.0039224 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 14
-
-========================================================================
-Received Import Request.
-  Time since last request: 30.761601 seconds.
-  path: Assets/SectorData/HP/Health_1 2.asset
-  artifactKey: Guid(d47fdc0c4477e404b8797c61b22437c4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/SectorData/HP/Health_1 2.asset using Guid(d47fdc0c4477e404b8797c61b22437c4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '4b387e270d776eaaa403d5793ef8eb46') in 0.0282425 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 1
-
-========================================================================
-Received Import Request.
-  Time since last request: 8.293249 seconds.
-  path: Assets/SectorData/Money/Money_3.asset
-  artifactKey: Guid(1884d1c70c81b6742ab67f6768156d3a) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/SectorData/Money/Money_3.asset using Guid(1884d1c70c81b6742ab67f6768156d3a) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'e717b61b6c89a547f44d75f2da876c35') in 0.0028549 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 13
-
-========================================================================
-Received Import Request.
-  Time since last request: 187.698419 seconds.
-  path: Assets/SectorData/Shileds/Shield_2.asset
-  artifactKey: Guid(fb3ddbc9584a5934ba9f306926de1a8d) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/SectorData/Shileds/Shield_2.asset using Guid(fb3ddbc9584a5934ba9f306926de1a8d) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '6c4350be9ecabc9eab2e01b84c021c79') in 0.0024023 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 14
-
-========================================================================
-Received Import Request.
-  Time since last request: 84.547712 seconds.
-  path: Assets/Prefabs/test/AttackSector2.prefab
-  artifactKey: Guid(32eed748f486f6c49bba6156f7f47009) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/AttackSector2.prefab using Guid(32eed748f486f6c49bba6156f7f47009) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'c5cabb2dfed155f9401b9133e81d0804') in 0.0150581 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000022 seconds.
-  path: Assets/Prefabs/test/HealthSector2.prefab
-  artifactKey: Guid(23dd1d7cabe78ae408f32551cac19301) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/HealthSector2.prefab using Guid(23dd1d7cabe78ae408f32551cac19301) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '14efc4945993b97f8bd2fafacc955c06') in 0.0099181 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000021 seconds.
-  path: Assets/Prefabs/test/HealthSector3.prefab
-  artifactKey: Guid(017c347c675572c4d9046a8de94e8db1) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/HealthSector3.prefab using Guid(017c347c675572c4d9046a8de94e8db1) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '5c1518b9c9436444123ffd5880734202') in 0.0089105 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000016 seconds.
-  path: Assets/Prefabs/test/ShieldSector2.prefab
-  artifactKey: Guid(fd4a175e1f2315d4690f9141f4fb2a6e) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/ShieldSector2.prefab using Guid(fd4a175e1f2315d4690f9141f4fb2a6e) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '2b11e8b3bc93eef1810dce3b0d50e65e') in 0.0082835 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000018 seconds.
-  path: Assets/Prefabs/test/MoneySector1.prefab
-  artifactKey: Guid(433cc834a41b0814a89e867f70dc02d4) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/MoneySector1.prefab using Guid(433cc834a41b0814a89e867f70dc02d4) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: '77590a988dc967a5f6e9a90a4c269874') in 0.0106274 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000017 seconds.
-  path: Assets/Prefabs/test/MoneySector2.prefab
-  artifactKey: Guid(aac847f6295755a4c86d0fc95f8574e1) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
-Start importing Assets/Prefabs/test/MoneySector2.prefab using Guid(aac847f6295755a4c86d0fc95f8574e1) Importer(815301076,1909f56bfc062723c751e8b465ee728b) (PreviewImporter) -> (artifact id: 'c796bd6915e3e93db336aa6b0004c3c5') in 0.008236 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 77
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.859421 seconds.
-  path: Assets/Prefabs/test/MoneySector1.prefab
-  artifactKey: Guid(433cc834a41b0814a89e867f70dc02d4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/MoneySector1.prefab using Guid(433cc834a41b0814a89e867f70dc02d4) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: 'd63d594a478cb415e5d47322ddbf99f4') in 0.0176249 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 12
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000041 seconds.
-  path: Assets/Prefabs/test/HealthSector3.prefab
-  artifactKey: Guid(017c347c675572c4d9046a8de94e8db1) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/HealthSector3.prefab using Guid(017c347c675572c4d9046a8de94e8db1) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '64b058be9abe199df02d550a251ad6a5') in 0.0163036 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 12
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000027 seconds.
-  path: Assets/Prefabs/test/ShieldSector3.prefab
-  artifactKey: Guid(faefd5f3f3ff8f943a7bf38defca4a38) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/ShieldSector3.prefab using Guid(faefd5f3f3ff8f943a7bf38defca4a38) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: 'a3c3d772bcf01baf25e24e9ab02b0e7f') in 0.043087 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 12
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000023 seconds.
-  path: Assets/Prefabs/test/ShieldSector1.prefab
-  artifactKey: Guid(853ae1ef913921942868c8a64c5c53fd) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/ShieldSector1.prefab using Guid(853ae1ef913921942868c8a64c5c53fd) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: '02c7197f2bf46bafe8d6d6f517c554d3') in 0.0158213 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 12
-
-========================================================================
-Received Import Request.
-  Time since last request: 0.000028 seconds.
-  path: Assets/Prefabs/test/HealthSector2.prefab
-  artifactKey: Guid(23dd1d7cabe78ae408f32551cac19301) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d)
-Start importing Assets/Prefabs/test/HealthSector2.prefab using Guid(23dd1d7cabe78ae408f32551cac19301) Importer(2089858483,b0f066a214c2f5e87bad3c948f4d605d) (ScriptedImporter) -> (artifact id: 'e7504cf6b9bc67b4136ed3675a09d836') in 0.0221005 seconds
-Number of updated asset objects reloaded before import = 0Number of asset objects unloaded after import = 12
-
-Editor requested this worker to shutdown with reason: Scaling down because of idle timeout
-AssetImportWorkerClient::OnTransportError - code=2 error=End of file
-AssetImportWorker is now disconnected from the server
-Process exiting
-Exiting without the bug reporter. Application will terminate with return code 0
